@@ -1,0 +1,39 @@
+<% unless template.valid? %>
+  <p class="rounded-md border border-amber-800 bg-amber-950 px-3 py-2 text-xs text-amber-100" role="alert">
+    <%= template.errors.to_sentence %>
+  </p>
+<% end %>
+
+<% if moves.any? %>
+  <% moving = moves.count(&:moving?) %>
+
+  <p class="mb-2 text-xs text-surface-400">
+    <%= pluralize(moving, "file") %> will move<%= ", #{moves.count(&:unchanged?)} already in place" if moves.any?(&:unchanged?) %>.
+  </p>
+
+  <%# Destinations are the decision being made here, so they get their own line
+      and wrap in full. Real music paths are far too long to truncate onto one. %>
+  <ul class="max-h-64 divide-y divide-surface-800 overflow-y-auto rounded-md border border-surface-800 bg-surface-950 px-3 text-xs">
+    <% moves.each do |move| %>
+      <li class="py-2">
+        <% if move.failed? %>
+          <p class="font-medium text-red-400"><%= move.song.filename %></p>
+          <p class="mt-0.5 text-red-300"><%= move.error %></p>
+        <% elsif move.unchanged? %>
+          <p class="wrap-anywhere text-surface-600">
+            <%= Configuration.relative_path(move.to) %>
+            <span class="text-surface-700">— already in place</span>
+          </p>
+        <% else %>
+          <p class="truncate text-surface-600" title="<%= Configuration.relative_path(move.from) %>">
+            <%= Configuration.relative_path(move.from) %>
+          </p>
+          <p class="mt-0.5 flex gap-1.5 font-medium text-surface-100">
+            <span class="shrink-0 text-accent-400" aria-hidden="true">&rarr;</span>
+            <span class="wrap-anywhere"><%= Configuration.relative_path(move.to) %></span>
+          </p>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

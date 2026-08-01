@@ -1,0 +1,60 @@
+<%= turbo_frame_tag "modal" do %>
+  <%# Wider than the default: file paths need the room. %>
+  <%= render layout: "shared/modal", locals: {
+        title: "Organize #{pluralize(@selected_songs.size, 'file')}", width: "max-w-3xl"
+      } do %>
+    <%# This form POSTs to #create and moves files. The preview below is a
+        separate GET of #new into its own frame -- see path_template_controller. %>
+    <%= form_with url: file_organizations_path, method: :post, class: "space-y-4",
+          data: {
+            controller: "path-template",
+            path_template_url_value: new_file_organization_path(
+              song_ids: @selected_songs.map(&:id), **list_state_params
+            )
+          } do |form| %>
+
+      <%= list_state_fields %>
+
+      <% @selected_songs.each do |song| %>
+        <%= hidden_field_tag "song_ids[]", song.id, id: nil %>
+      <% end %>
+
+      <% if @error.present? %>
+        <p class="rounded-md border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-100" role="alert">
+          <%= @error %>
+        </p>
+      <% end %>
+
+      <div>
+        <%= label_tag :template, "Path template", class: "label" %>
+        <%= text_field_tag :template, @template.to_s,
+              class: "input font-mono",
+              autocomplete: "off",
+              autofocus: true,
+              data: {
+                path_template_target: "input",
+                action: "input->path-template#preview"
+              } %>
+
+        <p class="mt-2 text-xs text-surface-500">
+          Tokens:
+          <% PathTemplate::TOKENS.each do |token| %>
+            <code class="rounded bg-surface-850 px-1 py-0.5 text-surface-300">&lt;<%= token %>&gt;</code>
+          <% end %>
+          <code class="rounded bg-surface-850 px-1 py-0.5 text-surface-300">&lt;Track:2&gt;</code>
+          zero-pads. Folders come from <code class="text-surface-300">/</code>; the extension is added
+          automatically.
+        </p>
+      </div>
+
+      <%= turbo_frame_tag "file_organization_preview", data: { path_template_target: "frame" } do %>
+        <%= render "file_organizations/preview", template: @template, moves: @moves %>
+      <% end %>
+
+      <div class="flex justify-end gap-2 border-t border-surface-800 pt-4">
+        <button type="button" class="btn" data-action="modal#close">Cancel</button>
+        <%= form.submit "Move #{pluralize(@selected_songs.size, 'file')}", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

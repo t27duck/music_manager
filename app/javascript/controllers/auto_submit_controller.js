@@ -1,13 +1,15 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Submits a filter form as the user types, without a Search button.
+// Submits a form as the user types, without a Search button.
 //
-// Typing would fire one request per keystroke otherwise, so submissions are
-// debounced; select changes submit immediately since they are discrete.
+// Typing would fire one request per keystroke, so submissions are debounced;
+// discrete controls (selects) call #submit to go at once. Only safe on forms
+// whose submission is idempotent -- see path_template_controller.js for the
+// preview case, where submitting the surrounding form would move files.
 //
-// The clear and reset controls are shown and hidden here rather than in the
-// template: only the results frame is re-rendered on submit, so anything in
-// this form that depended on a server round trip would never update.
+// The optional clear and reset controls are shown and hidden here rather than
+// in the template: only the target frame is re-rendered on submit, so anything
+// in the form itself that depended on a server round trip would never update.
 export default class extends Controller {
   static targets = ["query", "clear", "reset"]
   static values = { delay: { type: Number, default: 300 } }

@@ -1,6 +1,7 @@
 <%# A large centred dialog. Render with `render layout: "shared/modal"` and pass
-    a `title`; the block becomes the body. %>
-<dialog class="card m-auto w-full max-w-2xl p-0 text-surface-100 backdrop:bg-black/60"
+    a `title`; the block becomes the body. Pass `width` for content that needs
+    more room, such as full file paths. %>
+<dialog class="card m-auto w-full <%= local_assigns.fetch(:width, "max-w-2xl") %> p-0 text-surface-100 backdrop:bg-black/60"
         aria-labelledby="modal_title"
         data-controller="modal"
         data-action="click->modal#clickOutside close->modal#dismiss keydown.esc->modal#close">

@@ -3,12 +3,12 @@
       html: {
         class: "mb-5",
         data: {
-          controller: "filter-form",
+          controller: "auto-submit",
           turbo_frame: "songs",
           # Only `input`. Binding `change` here too would resubmit whenever a
           # text field lost focus -- including when the user clicks a row
           # checkbox, which would re-render the list and wipe their selection.
-          action: "input->filter-form#search"
+          action: "input->auto-submit#search"
         }
       } do |form| %>
 
@@ -18,19 +18,19 @@
             placeholder: "Search title, artist, album or genre…",
             autocomplete: "off",
             class: "input pr-9",
-            data: { filter_form_target: "query" } %>
+            data: { auto_submit_target: "query" } %>
 
       <button type="button"
               class="absolute inset-y-0 right-0 px-3 text-surface-500 transition hover:text-surface-200"
               aria-label="Clear search"
               <%= "hidden" if query.title_or_artist_or_album_or_genre_cont.blank? %>
-              data-filter-form-target="clear"
-              data-action="filter-form#clearQuery">&times;</button>
+              data-auto-submit-target="clear"
+              data-action="auto-submit#clearQuery">&times;</button>
     </div>
 
     <%= link_to "Reset", songs_path,
           class: "btn", hidden: !filters_active?(query),
-          data: { turbo_frame: "songs", filter_form_target: "reset" } %>
+          data: { turbo_frame: "songs", auto_submit_target: "reset" } %>
   </div>
 
   <details class="card mt-3 px-4 py-3" <%= "open" if advanced_filters_active?(query) %>>
@@ -75,12 +75,12 @@
         <%= form.select :missing_metadata,
               Song::MISSING_METADATA_FIELDS.map { |field| [ "No #{field.humanize.downcase}", field ] },
               { include_blank: "Any" },
-              class: "input", data: { action: "filter-form#submit" } %>
+              class: "input", data: { action: "auto-submit#submit" } %>
       </div>
     </div>
 
     <div class="mt-4 flex justify-end">
-      <button type="button" class="btn" data-action="filter-form#reset">Clear filters</button>
+      <button type="button" class="btn" data-action="auto-submit#reset">Clear filters</button>
     </div>
   </details>
 <% end %>

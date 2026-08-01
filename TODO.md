@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 10 — File organization
-- **Last completed:** Step 9 — Bulk operations
+- **Working on:** Step 11 — Upload
+- **Last completed:** Step 10 — File organization
 - **Blocked on:** nothing
 
 ---
@@ -137,11 +137,20 @@ file is the **plan** (what order, what is done, what is known-broken).
     collects the ids and appends them to the modal frame's URL instead. Title is deliberately not
     a bulk field. Selection resets whenever the list re-renders, which is per-page by design.
 
-- [ ] **Step 10 — File organization**
-  - [ ] `PathTemplate` — all tokens incl. `<Track:N>` and `<Filename>`; filename sanitization
-  - [ ] `FileOrganizer#preview` / `#apply!` — mkdir_p, move, update `file_path`, prune empty dirs,
-        collision handling
-  - [ ] `FileOrganizationsController#new` (preview re-rendered in a frame) / `#create`
+- [x] **Step 10 — File organization**
+  - [x] `PathTemplate` — all tokens incl. `<Track:N>` and `<Filename>`; per-segment sanitization;
+        rejects blank, token-less, absolute and `..` templates
+  - [x] `FileOrganizer#preview` / `#apply!` — mkdir_p, move, update `file_path`, prune emptied
+        directories, suffix collisions (against both disk and the rest of the batch)
+  - [x] `FileOrganizationsController#new` (**is** the preview) / `#create`; template remembered in
+        the session; "Organize files" in the selection toolbar
+  - [x] Renamed `filter_form_controller.js` → `auto_submit_controller.js` (it was never
+        filter-specific); added `path_template_controller.js` for the live preview
+  - Notes: the preview is a **GET of #new into its own frame**, never a submit of the surrounding
+    form — that form POSTs to #create and moves files. Moves happen inside a transaction that wraps
+    `update!` + `mv`, so a failed move leaves the database untouched. The preview puts source and
+    destination on separate lines, destination wrapping in full, in a `max-w-3xl` modal: a
+    single truncated line hid the destination entirely for real filenames.
 
 - [ ] **Step 11 — Upload**
   - [ ] `UploadsController#show/#create`; files land in `_NEW/` preserving dragged folder structure
@@ -247,6 +256,18 @@ test group. Coverage after step 4 is ~98%.
 - `Capybara.enable_aria_label = true` is set, so `aria-label` resolves controls — which is how a
   screen reader finds them too. Table checkboxes are labelled that way rather than with visible
   labels per row.
+- **Never wire debounced auto-submit to a form whose submission is destructive.** The organize
+  template first lived inside the form that POSTs to `#create`, so typing a valid template moved
+  the user's files mid-keystroke. Live previews must be a separate GET into their own frame.
+- A failed `update!` still leaves the assigned value on the in-memory record even after the
+  transaction rolls back. Reload before handing the object back to a caller.
+- One system-test run showed a single unreproducible error; six consecutive runs since have been
+  clean. Watch for it rather than assuming it is gone.
+- **Review screens with realistic data, not tidy fixtures.** `a.mp3` / "Test Song" made the
+  organize preview look fine; a real path
+  ("Bad Hair Day/01 - Amish Paradise (Parody of 'Gangsta's Paradise' by Coolio).mp3") truncated the
+  destination away entirely. Tests could not catch it — CSS truncation still reports full text to
+  Selenium — so it is worth eyeballing new screens with long names and odd characters.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is

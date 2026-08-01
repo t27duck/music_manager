@@ -17,6 +17,10 @@ Rails.application.routes.draw do
   # Applying one set of changes to a checkbox selection. #new is the modal.
   resources :bulk_updates, only: [ :new, :create ]
 
+  # Re-filing songs under a path template. #new *is* the preview: it re-renders
+  # as the template is edited. #create performs the moves.
+  resources :file_organizations, only: [ :new, :create ]
+
   # Library scan. #create enqueues the job, #show reports current progress.
   resource :sync, only: [ :show, :create ]
 

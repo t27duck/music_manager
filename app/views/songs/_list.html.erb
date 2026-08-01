@@ -1,4 +1,6 @@
-<div data-controller="selection" data-selection-url-value="<%= new_bulk_update_path(**list_state_params) %>">
+<div data-controller="selection"
+     data-selection-url-value="<%= new_bulk_update_path(**list_state_params) %>"
+     data-selection-organize-url-value="<%= new_file_organization_path(**list_state_params) %>">
   <div class="mb-3 flex min-h-8 flex-wrap items-center justify-between gap-3">
     <p class="text-sm text-surface-400" id="songs_count">
       <%= render "songs/count", songs: songs %>
@@ -10,6 +12,7 @@
       </span>
 
       <button type="button" class="btn btn-primary" data-action="selection#edit">Edit selected</button>
+      <button type="button" class="btn" data-action="selection#organize">Organize files</button>
       <button type="button" class="btn" data-action="selection#clear">Clear</button>
     </div>
   </div>

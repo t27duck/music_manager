@@ -8,7 +8,11 @@ import { Controller } from "@hotwired/stimulus"
 // is loaded into the modal frame.
 export default class extends Controller {
   static targets = ["checkbox", "toggleAll", "actions", "count"]
-  static values = { url: String, frame: { type: String, default: "modal" } }
+  static values = {
+    url: String,
+    organizeUrl: String,
+    frame: { type: String, default: "modal" }
+  }
 
   connect() {
     this.refresh()
@@ -39,7 +43,15 @@ export default class extends Controller {
   }
 
   edit() {
-    const url = new URL(this.urlValue, window.location.origin)
+    this.openModal(this.urlValue)
+  }
+
+  organize() {
+    this.openModal(this.organizeUrlValue)
+  }
+
+  openModal(path) {
+    const url = new URL(path, window.location.origin)
     this.selectedIds.forEach((id) => url.searchParams.append("song_ids[]", id))
 
     document.getElementById(this.frameValue).src = url.toString()
