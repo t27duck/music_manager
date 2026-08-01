@@ -4,7 +4,9 @@ class SongsFilteringTest < ActionDispatch::IntegrationTest
   include LibraryTestHelper
 
   def titles_on_page
-    css_select("tbody tr td:first-child").map { |cell| cell.text.strip }
+    # Target the title cell by its frame id rather than by column position,
+    # which changes whenever a column is added.
+    css_select("tbody turbo-frame[id^='title_song_']").map { |cell| cell.text.strip }
   end
 
   test "the global search narrows the list" do

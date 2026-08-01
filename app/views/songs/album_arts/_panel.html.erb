@@ -1,0 +1,37 @@
+<%# The album art editor, shown inside the song edit modal. Its two forms are
+    siblings of the metadata form, never nested inside it. %>
+<%= turbo_frame_tag dom_id(song, :album_art) do %>
+  <div class="flex items-start gap-4">
+    <%= render "songs/album_arts/preview", song: song, size: :large %>
+
+    <div class="min-w-0 flex-1 space-y-2">
+      <% if local_assigns[:error].present? %>
+        <p class="rounded-md border border-red-800 bg-red-950 px-3 py-2 text-xs text-red-100" role="alert">
+          <%= error %>
+        </p>
+      <% end %>
+
+      <%= form_with url: song_album_art_path(song), method: :patch do |form| %>
+        <%= form.label :album_art, "Album art image", class: "label" %>
+        <%= form.file_field :album_art,
+              accept: Song::ALBUM_ART_CONTENT_TYPES.join(","),
+              class: "block w-full text-xs text-surface-400 file:mr-3 file:rounded-md file:border-0 file:bg-surface-800 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-surface-100 hover:file:bg-surface-700" %>
+
+        <div class="mt-2 flex items-center gap-2">
+          <%= form.submit "Upload art", class: "btn btn-primary" %>
+
+          <% if song.album_art? %>
+            <%= link_to "Remove art", song_album_art_path(song),
+                  class: "btn",
+                  data: { turbo_method: :delete, turbo_confirm: "Remove the album art from this file?" } %>
+          <% end %>
+        </div>
+      <% end %>
+
+      <p class="text-xs text-surface-500">
+        JPEG, PNG or GIF, up to <%= number_to_human_size(Song::MAX_ALBUM_ART_BYTES) %>. The image is
+        written into the MP3 itself.
+      </p>
+    </div>
+  </div>
+<% end %>

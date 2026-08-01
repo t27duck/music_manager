@@ -51,7 +51,7 @@ class SongsControllerTest < ActionDispatch::IntegrationTest
 
     get songs_url
 
-    titles = css_select("tbody tr td:first-child").map { |td| td.text.strip }
+    titles = css_select("tbody turbo-frame[id^='title_song_']").map { |cell| cell.text.strip }
     assert_equal [ "First", "Second" ], titles
   end
 

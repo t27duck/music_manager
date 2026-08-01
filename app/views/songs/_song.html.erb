@@ -1,4 +1,8 @@
 <tr id="<%= dom_id(song) %>" class="group transition hover:bg-surface-850/60">
+  <td class="py-2 pl-4 pr-0">
+    <%= render "songs/album_arts/preview", song: song, size: :small %>
+  </td>
+
   <td class="max-w-xs px-4 py-2.5 font-medium text-surface-100" title="<%= song.relative_path %>">
     <%= render "songs/fields/field", song: song, name: "title" %>
   </td>

@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 8 — Album art
-- **Last completed:** Step 7 — Inline editing
+- **Working on:** Step 9 — Bulk operations
+- **Last completed:** Step 8 — Album art
 - **Blocked on:** nothing
 
 ---
@@ -114,11 +114,16 @@ file is the **plan** (what order, what is done, what is known-broken).
     replacing the table mid-edit would defeat the point of editing in place. Use the modal when the
     change should re-sort or re-filter.
 
-- [ ] **Step 8 — Album art**
-  - [ ] `Mp3File#album_art`, `#album_art=`, `#remove_album_art`
-  - [ ] `Songs::AlbumArtsController` (`show`/`edit`/`update`/`destroy`) with etag from
-        `album_art_checksum`; `Rails.cache.fetch` around extraction
-  - [ ] Thumbnail column in the list; art in the edit modal; placeholder when absent
+- [x] **Step 8 — Album art**
+  - [x] `Mp3File#album_art`, `#album_art=`, `#remove_album_art`
+  - [x] `Song#update_album_art!` / `#remove_album_art!` with type and size validation
+        (`Song::InvalidAlbumArt`) — reuse these in step 9's bulk art assignment
+  - [x] `Songs::AlbumArtsController` (`show`/`edit`/`update`/`destroy`)
+  - [x] Thumbnail column in the list; art panel in the edit modal; placeholder when absent
+  - Notes: **no `Rails.cache.fetch`** around extraction, contrary to the original plan. The image
+    URL carries `?v=<checksum>`, so a given URL's bytes can never change and the response is
+    `expires_in 1.year, public: true` with an etag — the browser fetches each image exactly once.
+    That beats storing multi-megabyte blobs in solid_cache, which has its own entry-size limits.
 
 - [ ] **Step 9 — Bulk operations**
   - [ ] `selection_controller.js` — row checkboxes, select/deselect all, live count
@@ -217,6 +222,15 @@ test group. Coverage after step 4 is ~98%.
   stack (`show_exceptions = :rescuable`), so assert `:not_found` rather than `assert_raises`.
 - Escape-to-cancel also fires `blur`. Any "save on blur" handler needs a flag so the discarded
   value is not written on the way out — see `inline_edit_controller.js`.
+- `test/fixtures/files/cover.jpg` is **byte-identical to the art already embedded in the MP3
+  fixtures**. A test that needs *different* art must supply its own (both album-art test files
+  carry a tiny inline `GIF` constant for this).
+- Rails hashes etag values, so `response.headers["ETag"]` is never the raw string passed to
+  `stale?`. Assert the contract (it changes when the content changes), not the literal.
+- Capybara does not match `aria-label` unless `enable_aria_label` is set. Give inputs real
+  `<label>`s — better for users anyway.
+- Don't select table cells by position (`td:first-child`); a new column silently breaks every such
+  test. The per-cell turbo frames (`turbo-frame[id^='title_song_']`) are stable hooks.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is

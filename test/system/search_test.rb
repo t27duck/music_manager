@@ -102,6 +102,6 @@ class SearchTest < ApplicationSystemTestCase
 
   private
     def listed_titles
-      all("tbody tr td:first-child").map(&:text)
+      all("tbody turbo-frame[id^='title_song_']").map(&:text)
     end
 end

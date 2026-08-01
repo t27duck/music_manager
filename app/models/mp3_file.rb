@@ -80,6 +80,17 @@ class Mp3File
     open { |mp3| picture_data(mp3) }
   end
 
+  # Replaces any existing APIC frame. The bytes are copied with #b because
+  # ruby-mp3info calls force_encoding on what it is given, which would raise on
+  # a frozen string.
+  def album_art=(data)
+    open { |mp3| mp3.tag2.add_picture(data.b) }
+  end
+
+  def remove_album_art
+    open { |mp3| mp3.tag2.remove_pictures }
+  end
+
   # ID3 tags routinely contain bytes that are not valid UTF-8, and NULs left over
   # from fixed-width ID3v1 fields. Both would blow up on the way into SQLite, so
   # scrub them here rather than at every call site. Returns nil for blank values.

@@ -1,0 +1,15 @@
+<%# The artwork itself, or a placeholder. `size` is :large (modal) or :small (list row).
+    The URL carries the checksum so a changed image is a different URL and the
+    cached one is never shown by mistake. %>
+<% classes = size == :large ? "h-28 w-28 rounded-lg" : "h-9 w-9 rounded" %>
+
+<% if song.album_art? %>
+  <%= image_tag song_album_art_path(song, v: song.album_art_checksum),
+        alt: "Album art for #{song.title}",
+        loading: "lazy",
+        class: "#{classes} shrink-0 border border-surface-800 bg-surface-900 object-cover" %>
+<% else %>
+  <span class="<%= classes %> flex shrink-0 items-center justify-center border border-surface-800 bg-surface-900 text-surface-700"
+        title="No album art"
+        aria-hidden="true"><%= size == :large ? "♫" : "♪" %></span>
+<% end %>

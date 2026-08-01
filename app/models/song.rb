@@ -8,6 +8,14 @@ class Song < ApplicationRecord
   # Fields the "missing metadata" filter can look for.
   MISSING_METADATA_FIELDS = %w[ artist album genre year ].freeze
 
+  # Album art is embedded in the file, so an oversized image bloats every copy
+  # of that song forever. These are generous for cover art.
+  ALBUM_ART_CONTENT_TYPES = %w[ image/jpeg image/png image/gif ].freeze
+  MAX_ALBUM_ART_BYTES = 5.megabytes
+
+  # Raised when uploaded artwork is not something we are willing to embed.
+  class InvalidAlbumArt < StandardError; end
+
   # Set by SongImporter, which is reading tags *from* the file and must not
   # immediately write them back. Applies to the next save only; it is cleared
   # afterwards so a record cannot silently stop writing tags for the rest of
@@ -86,6 +94,28 @@ class Song < ApplicationRecord
     album_art_checksum.present?
   end
 
+  # The embedded artwork's bytes, read straight from the file.
+  def album_art
+    Mp3File.new(file_path).album_art
+  end
+
+  # Embeds new artwork and records what it is, so the list can link to it and
+  # the browser can cache it by checksum.
+  def update_album_art!(data)
+    data = validated_album_art(data)
+
+    Mp3File.new(file_path).album_art = data
+    update!(
+      album_art_checksum: Digest::MD5.hexdigest(data),
+      album_art_content_type: Mp3File.image_content_type(data)
+    )
+  end
+
+  def remove_album_art!
+    Mp3File.new(file_path).remove_album_art
+    update!(album_art_checksum: nil, album_art_content_type: nil)
+  end
+
   # Removes the song and its file. The file is deleted inside the transaction so
   # that a failure to delete it rolls the record back, rather than leaving a row
   # pointing at a file that is still there.
@@ -100,6 +130,30 @@ class Song < ApplicationRecord
   end
 
   private
+    # The type is taken from the file's magic bytes, never from the upload's
+    # declared content type or its extension -- both are trivially wrong. (The
+    # cover.jpg test fixture is really a PNG, which is the case in point.)
+    def validated_album_art(data)
+      data = data.to_s.b
+
+      raise InvalidAlbumArt, "The image is empty." if data.empty?
+
+      if data.bytesize > MAX_ALBUM_ART_BYTES
+        raise InvalidAlbumArt,
+          "Album art must be #{number_to_human_size(MAX_ALBUM_ART_BYTES)} or smaller."
+      end
+
+      unless Mp3File.image_content_type(data).in?(ALBUM_ART_CONTENT_TYPES)
+        raise InvalidAlbumArt, "Album art must be a JPEG, PNG or GIF image."
+      end
+
+      data
+    end
+
+    def number_to_human_size(bytes)
+      ActiveSupport::NumberHelper.number_to_human_size(bytes)
+    end
+
     def tags_need_writing?
       !skip_tag_write && TAG_ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }
     end

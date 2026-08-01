@@ -8,6 +8,9 @@ Rails.application.routes.draw do
       # One editable cell in the song list. #show is the read-only cell, #edit
       # swaps in the input, #update saves it.
       resources :fields, only: [ :show, :edit, :update ], param: :name
+
+      # Embedded cover art. #show serves the image bytes themselves.
+      resource :album_art, only: [ :show, :edit, :update, :destroy ]
     end
   end
 

@@ -1,3 +1,8 @@
+<%# Rendered above the metadata form, not inside it: it has forms of its own. %>
+<div class="mb-5 border-b border-surface-800 pb-5">
+  <%= render "songs/album_arts/panel", song: song %>
+</div>
+
 <%= form_with model: song, class: "space-y-4" do |form| %>
   <%# Carries the list's filters and page so the response can re-render the
       list exactly as the user left it. %>
