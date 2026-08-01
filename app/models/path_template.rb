@@ -27,10 +27,7 @@ class PathTemplate
 
   TOKENS = (TEXT_TOKENS.keys + NUMERIC_TOKENS + %w[ Filename ]).freeze
 
-  # Characters no filesystem we care about will accept, plus control characters.
-  # "/" is included because it is the separator: a token whose *value* contains
-  # a slash must not silently create a directory.
-  ILLEGAL_CHARACTERS = %r{[<>:"/\\|?*\x00-\x1f]}
+  ILLEGAL_CHARACTERS = SafeFilename::ILLEGAL_CHARACTERS
 
   attr_reader :template
 

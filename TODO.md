@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 11 — Upload
-- **Last completed:** Step 10 — File organization
+- **Working on:** Step 12 — Polish & hardening
+- **Last completed:** Step 11 — Upload
 - **Blocked on:** nothing
 
 ---
@@ -152,12 +152,20 @@ file is the **plan** (what order, what is done, what is known-broken).
     destination on separate lines, destination wrapping in full, in a `max-w-3xl` modal: a
     single truncated line hid the destination entirely for real filenames.
 
-- [ ] **Step 11 — Upload**
-  - [ ] `UploadsController#show/#create`; files land in `_NEW/` preserving dragged folder structure
-  - [ ] `UploadChannel` streaming `uploads:<uuid>`; `upload_controller.js` dropzone + per-file XHR,
-        progress bar, counter, scrollable log, summary
-  - [ ] Path-traversal prevention; non-MP3 rejected; duplicates via `find_or_initialize_by`
-  - [ ] Upload link in the nav
+- [x] **Step 11 — Upload**
+  - [x] `UploadsController#show/#create` (one POST per file); `Upload` PORO writes into `_NEW/`
+        preserving the dragged folder structure
+  - [x] `UploadChannel` streaming `uploads:<id>`; `upload_controller.js` dropzone with recursive
+        directory walk, click-to-browse fallback (files **and** folder), per-file XHR progress,
+        counter, scrollable log, summary
+  - [x] Path-traversal prevention (`SafeFilename`, plus a re-check of the resolved path);
+        non-MP3 rejected by extension *and* by failing to parse; duplicates via `SongImporter`
+  - [x] Upload link in the nav
+  - [x] `SafeFilename` extracted so the traversal-critical character rules cannot drift from
+        `PathTemplate`'s
+  - Notes: the browser owns the counters (it has the file list and the XHR progress); the log lines
+    come from the server over cable, so what is reported is what actually happened to each file.
+    Uploads are sequential on purpose.
 
 - [ ] **Step 12 — Polish & hardening**
   - [ ] Cross-feature system tests, seeds, README pass
@@ -263,6 +271,12 @@ test group. Coverage after step 4 is ~98%.
   transaction rolls back. Reload before handing the object back to a caller.
 - One system-test run showed a single unreproducible error; six consecutive runs since have been
   clean. Watch for it rather than assuming it is gone.
+- **`crypto.randomUUID()` needs a secure context.** Served over plain HTTP on any hostname other
+  than localhost — the normal case for a local music server — it is undefined, and the exception
+  killed the whole upload controller silently. `crypto.getRandomValues` has no such restriction.
+  Check any other browser API you reach for against the same trap.
+- Action Cable's `test` adapter subclasses the async one, so broadcasts really are delivered to a
+  browser in system tests as well as recorded for `assert_broadcasts`.
 - **Review screens with realistic data, not tidy fixtures.** `a.mp3` / "Test Song" made the
   organize preview look fine; a real path
   ("Bad Hair Day/01 - Amish Paradise (Parody of 'Gangsta's Paradise' by Coolio).mp3") truncated the
