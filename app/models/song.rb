@@ -86,6 +86,19 @@ class Song < ApplicationRecord
     album_art_checksum.present?
   end
 
+  # Removes the song and its file. The file is deleted inside the transaction so
+  # that a failure to delete it rolls the record back, rather than leaving a row
+  # pointing at a file that is still there.
+  #
+  # Deliberately not a destroy callback: LibrarySync#prune deletes rows whose
+  # files are already gone, and must never touch the filesystem.
+  def destroy_with_file!
+    transaction do
+      destroy!
+      File.delete(file_path) if File.exist?(file_path)
+    end
+  end
+
   private
     def tags_need_writing?
       !skip_tag_write && TAG_ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }

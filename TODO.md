@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 6 — Edit modal + deletion
-- **Last completed:** Step 5 — Search & filtering
+- **Working on:** Step 7 — Inline editing
+- **Last completed:** Step 6 — Edit modal + deletion
 - **Blocked on:** nothing
 
 ---
@@ -92,10 +92,15 @@ file is the **plan** (what order, what is done, what is known-broken).
     user types. Default ordering stays `Song.ordered`; Ransack only takes over once `q[s]` is set,
     because the natural order is four columns deep.
 
-- [ ] **Step 6 — Edit modal + deletion**
-  - [ ] `SongsController#edit/#update/#destroy`; `shared/_modal` + `modal_controller.js`
-  - [ ] Turbo Stream response closes the modal and re-renders the list preserving `q` and `page`
-  - [ ] Delete removes the row **and** the file from disk
+- [x] **Step 6 — Edit modal + deletion**
+  - [x] `SongsController#edit/#update/#destroy`; `shared/_modal` (a `<dialog>`) + `modal_controller.js`
+  - [x] Turbo Stream response closes the modal and re-renders the list preserving `q` and `page`
+        via `list_state_fields` / `list_state_params`
+  - [x] `Song#destroy_with_file!` removes the row **and** the file, rolling back if the file
+        cannot be deleted
+  - [x] Toasts finally in use; failed tag writes re-render the modal with errors (422)
+  - Notes: `shared/_modal` is reusable — render with `render layout: "shared/modal"`. Steps 9 and
+    10 should use it rather than rolling their own.
 
 - [ ] **Step 7 — Inline editing**
   - [ ] `Songs::FieldsController` (`edit`/`update`, `param: :name`, allow-listed against
@@ -197,6 +202,10 @@ test group. Coverage after step 4 is ~98%.
   new state with a retrying matcher (`assert_selector "tbody tr:first-child", text: ...`) first.
 - Ransack `sort_link` URL-encodes its params, so hrefs read `q%5Bs%5D=title+asc`, and they resolve
   to `/` rather than `/songs` because root maps to the same action.
+- **`button_to` renders a `<form>`.** Putting one inside another form is invalid HTML and the
+  browser silently drops it, so the button does nothing. Keep `button_to` outside `form_with`.
+- Hover-only controls (`opacity-0 group-hover:opacity-100`) are invisible to Capybara *and* to
+  anyone on a touch device. Keep row actions visible and merely subdued.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is

@@ -1,0 +1,19 @@
+<%# A large centred dialog. Render with `render layout: "shared/modal"` and pass
+    a `title`; the block becomes the body. %>
+<dialog class="card m-auto w-full max-w-2xl p-0 text-surface-100 backdrop:bg-black/60"
+        aria-labelledby="modal_title"
+        data-controller="modal"
+        data-action="click->modal#clickOutside close->modal#dismiss keydown.esc->modal#close">
+  <div class="flex items-center justify-between border-b border-surface-800 px-5 py-4">
+    <h2 class="text-lg font-medium" id="modal_title"><%= title %></h2>
+
+    <button type="button"
+            class="rounded p-1 text-xl leading-none text-surface-500 transition hover:text-surface-100"
+            aria-label="Close"
+            data-action="modal#close">&times;</button>
+  </div>
+
+  <div class="px-5 py-5">
+    <%= yield %>
+  </div>
+</dialog>

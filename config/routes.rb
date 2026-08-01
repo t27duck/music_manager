@@ -3,7 +3,7 @@ Rails.application.routes.draw do
 
   root "songs#index"
 
-  resources :songs, only: [ :index ]
+  resources :songs, only: [ :index, :edit, :update, :destroy ]
 
   # Library scan. #create enqueues the job, #show reports current progress.
   resource :sync, only: [ :show, :create ]

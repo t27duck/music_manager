@@ -1,4 +1,21 @@
 module SongsHelper
+  # The filters and page currently in effect, for links that must come back to
+  # the same view of the list.
+  def list_state_params
+    state = { q: params.fetch(:q, {}).permit(*SongsController::SEARCH_KEYS).to_h.compact_blank }
+    state[:page] = params[:page] if params[:page].present?
+    state.compact_blank
+  end
+
+  # The same state as hidden inputs, for forms.
+  def list_state_fields
+    state = list_state_params
+    tags = state.fetch(:q, {}).map { |key, value| hidden_field_tag("q[#{key}]", value, id: nil) }
+    tags << hidden_field_tag(:page, state[:page], id: nil) if state[:page]
+
+    safe_join(tags)
+  end
+
   # A sortable column heading. Ransack renders the link and appends its own
   # direction arrow; this only supplies the styling.
   def sort_header(query, attribute, label)

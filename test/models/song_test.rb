@@ -99,4 +99,35 @@ class SongTest < ActiveSupport::TestCase
 
     assert_equal [ first, second, third ], songs_in_temp_dir.ordered.to_a
   end
+
+  test "destroy_with_file! removes the record and the file" do
+    song = create_test_song("song.mp3")
+    path = song.file_path
+
+    song.destroy_with_file!
+
+    assert_not Song.exists?(song.id)
+    assert_not File.exist?(path)
+  end
+
+  test "destroy_with_file! succeeds when the file is already gone" do
+    song = create_test_song("song.mp3")
+    File.delete(song.file_path)
+
+    song.destroy_with_file!
+
+    assert_not Song.exists?(song.id)
+  end
+
+  test "destroy_with_file! keeps the record when the file cannot be deleted" do
+    song = create_test_song("locked/song.mp3")
+    directory = File.dirname(song.file_path)
+    FileUtils.chmod(0o500, directory)
+
+    assert_raises(SystemCallError) { song.destroy_with_file! }
+
+    assert Song.exists?(song.id), "the record was destroyed even though its file survived"
+  ensure
+    FileUtils.chmod(0o700, directory) if directory
+  end
 end

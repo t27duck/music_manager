@@ -1,0 +1,74 @@
+<%= form_with model: song, class: "space-y-4" do |form| %>
+  <%# Carries the list's filters and page so the response can re-render the
+      list exactly as the user left it. %>
+  <%= list_state_fields %>
+
+  <% if song.errors.any? %>
+    <div class="rounded-md border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-100" role="alert">
+      <ul class="list-inside list-disc space-y-1">
+        <% song.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :title, class: "label" %>
+    <%= form.text_field :title, class: "input", autofocus: true %>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <%= form.label :artist, class: "label" %>
+      <%= form.text_field :artist, class: "input" %>
+    </div>
+
+    <div>
+      <%= form.label :album, class: "label" %>
+      <%= form.text_field :album, class: "input" %>
+    </div>
+
+    <div>
+      <%= form.label :genre, class: "label" %>
+      <%= form.text_field :genre, class: "input" %>
+    </div>
+
+    <div>
+      <%= form.label :year, class: "label" %>
+      <%= form.number_field :year, class: "input", in: 1..9999 %>
+    </div>
+
+    <div>
+      <%= form.label :disc_number, "Disc", class: "label" %>
+      <%= form.number_field :disc_number, class: "input", min: 1 %>
+    </div>
+
+    <div>
+      <%= form.label :track_number, "Track", class: "label" %>
+      <%= form.number_field :track_number, class: "input", min: 1 %>
+    </div>
+  </div>
+
+  <div>
+    <span class="label">File</span>
+    <p class="truncate rounded-md border border-surface-800 bg-surface-950 px-3 py-1.5 font-mono text-xs text-surface-400"
+       title="<%= song.file_path %>"><%= song.relative_path %></p>
+  </div>
+
+  <div class="flex justify-end gap-2 border-t border-surface-800 pt-4">
+    <button type="button" class="btn" data-action="modal#close">Cancel</button>
+    <%= form.submit "Save changes", class: "btn btn-primary" %>
+  </div>
+<% end %>
+
+<%# Outside the form above: button_to renders its own <form>, and forms cannot
+    be nested -- the browser silently drops the inner one. %>
+<div class="mt-5 flex items-center justify-between gap-4 border-t border-surface-800 pt-4">
+  <p class="text-xs text-surface-500">Deleting also removes the file from disk.</p>
+
+  <%= button_to "Delete song", song_path(song, **list_state_params),
+        method: :delete,
+        class: "btn btn-danger",
+        form: { data: { turbo_confirm: "Delete #{song.title} and remove the file from disk?" } } %>
+</div>

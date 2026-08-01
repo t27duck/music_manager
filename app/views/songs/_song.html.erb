@@ -1,4 +1,4 @@
-<tr id="<%= dom_id(song) %>" class="transition hover:bg-surface-850/60">
+<tr id="<%= dom_id(song) %>" class="group transition hover:bg-surface-850/60">
   <td class="max-w-xs truncate px-4 py-2.5 font-medium text-surface-100" title="<%= song.relative_path %>">
     <%= metadata_value song.title %>
   </td>
@@ -8,4 +8,12 @@
   <td class="px-4 py-2.5 tabular-nums"><%= metadata_value song.year %></td>
   <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_track song %></td>
   <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_duration song.duration %></td>
+
+  <td class="px-4 py-2.5 text-right">
+    <%# Always visible rather than hover-only: a hover-only action is invisible
+        on touch devices and hard to discover anywhere. %>
+    <%= link_to "Edit", edit_song_path(song, **list_state_params),
+          class: "rounded-md px-2 py-1 text-xs font-medium text-surface-500 transition hover:bg-surface-800 hover:text-accent-400 group-hover:text-accent-400",
+          data: { turbo_frame: "modal" } %>
+  </td>
 </tr>

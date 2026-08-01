@@ -1,0 +1,5 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render layout: "shared/modal", locals: { title: "Edit song" } do %>
+    <%= render "songs/form", song: @song %>
+  <% end %>
+<% end %>

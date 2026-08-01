@@ -1,0 +1,11 @@
+<%= turbo_stream.update "modal", "" %>
+
+<%= turbo_stream.replace "songs" do %>
+  <%= turbo_frame_tag "songs", data: { turbo_action: "advance" } do %>
+    <%= render "songs/list", songs: @songs, query: @query %>
+  <% end %>
+<% end %>
+
+<%= turbo_stream.append "toasts" do %>
+  <%= render "shared/toast", level: :notice, message: "Deleted #{@song.title} from the library and disk." %>
+<% end %>
