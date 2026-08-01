@@ -1,0 +1,205 @@
+# Project Overview
+
+MusicManager is a local MP3 library management web application built with Rails 8.1 and Ruby 4.0. It scans directories for MP3 files, caches metadata in SQLite, and allows editing ID3 tags and album art.
+
+## Development Commands
+
+```bash
+bin/setup              # Install deps, prepare DB, start dev server
+bin/setup --reset      # Full reset with DB drop/recreate
+bin/dev                # Start development server (port 3000)
+bin/rails console      # Rails console
+```
+
+## Testing
+
+- Run all tests: `bin/rails test`
+- Run system tests: `bin/rails test:system`
+- Run specific test file: `bin/rails test test/path/to/test_file.rb`
+- Run specific test method: `bin/rails test test/path/to/test_file.rb:LINE_NUMBER`
+- Headless Chrome via selenium is available running in a separate container on port 45678 under the docker hostname selenium.
+
+### Test Patterns for File Operations
+
+Tests that manipulate files (sync, organize, bulk operations) use temp directory isolation for parallel safety:
+Test environment uses `test/library/` as the library root.
+Cover image file and mp3 file fixtures at `test/fixtures/files/`.
+
+```ruby
+setup do
+  @temp_dir = Dir.mktmpdir("test_name_#{Process.pid}_#{Thread.current.object_id}")
+  @original_library_root = Configuration.library_root
+  Configuration.instance_variable_set(:@library_root, @temp_dir)
+end
+
+teardown do
+  Configuration.instance_variable_set(:@library_root, @original_library_root)
+  FileUtils.remove_entry(@temp_dir) if @temp_dir && Dir.exist?(@temp_dir)
+end
+```
+
+Helper to create test songs with actual MP3 files:
+
+```ruby
+def create_test_song(fixture_name, dest_subpath, attrs = {})
+  source = Rails.root.join("test/fixtures/files/#{fixture_name}")
+  dest = File.join(@temp_dir, dest_subpath)
+  FileUtils.mkdir_p(File.dirname(dest))
+  FileUtils.cp(source, dest)
+
+  Song.create!(
+    title: attrs[:title] || "Test Song",
+    artist: attrs[:artist] || "Test Artist",
+    file_path: dest,
+    file_size: File.size(dest),
+    duration: 180,
+    **attrs.slice(:album, :genre, :year, :track_number)
+  )
+end
+```
+
+Key points:
+- Each test gets a unique temp directory (includes PID + thread ID for parallel safety)
+- Stub `Configuration.library_root` to isolate tests from real library directory
+- Copy fixture MP3s into temp directory for file operation tests
+- Always clean up temp directories in teardown
+- Use `songs_in_temp_dir` helper to scope queries when testing jobs that affect all songs
+
+## Linting & CI
+
+```bash
+bin/rubocop            # Ruby style (Rails Omakase)
+bin/ci                 # Full CI pipeline: setup, lint, security, tests
+```
+
+CI pipeline runs: rubocop → bundler-audit → importmap audit → brakeman → rails test → db:seed:replant
+
+## Tech Stack
+
+- **Frontend**: Hotwire (Turbo + Stimulus), Importmap for JS, TailwindCSS v4 (CSS-first, theme in `app/assets/tailwind/application.css` — there is no `tailwind.config.js`)
+- **Background Jobs**: SolidQueue with ActiveJob (production only — see Key Configuration)
+- **Database**: SQLite (storage/ directory)
+- **MP3 Tags**: ruby-mp3info, pinned to the `ruby_34` branch of the fork at github.com/t27duck/ruby-mp3info. That branch is the one that survives Ruby 3.4+ frozen string literals; `master` is upstream 0.8.10 and does not.
+- **Filtering/Pagination**: Ransack, Kaminari
+
+## Key Configuration
+
+- `Configuration.library_root` class method defined in `config/initializers/configuration.rb` - defaults to `{pwd}/library/`, overridable via `LIBRARY_ROOT` ENV variable. In the test environment it defaults to `test/library/` so a test that forgets to stub the root scans an empty directory instead of the real music library.
+- Database files stored in `storage/` directory
+- Background jobs run on the **`:async` adapter in development and test, on purpose**. `config/cable.yml` uses the in-process `async` cable adapter in development, so a separate SolidQueue worker process would broadcast progress into its own memory and the browser would never receive it. Production uses SolidQueue + SolidCable. Do not add a `jobs:` line to `Procfile.dev`.
+- `TODO.md` tracks implementation progress step by step; read it before starting work.
+
+## Instructions
+
+- Write code in the "Rails Way" and take advantage of the functionality of the Rails framework and best practice design patterns.
+- Always read entire files. Otherwise, you don't know what you don't know, and will end up making mistakes, duplicating code that already exists, or misunderstanding the architecture.
+- Organise code into separate files wherever appropriate, and follow general coding best practices about variable naming, modularity, function complexity, file sizes, commenting, etc.
+- Code is read more often than it is written, optimize code for readability.
+- Do not carry out large refactors unless explicitly instructed to do so.
+- When doing UI & UX work, make sure designs are easy to use and follow UI / UX best practices. Pay attention to interaction patterns, micro-interactions, and are proactive about creating smooth, engaging user interfaces that delight users.
+- Prefer RESTful routes and nested controllers over custom actions
+- When importing files without title, default to filename without extension
+- Ask to commit often - specifically after each feature is implemented.
+
+## Documentation Maintenance
+
+Keep `CLAUDE.md` updated as the project evolves. Update these files when:
+
+- Adding or removing significant dependencies (gems, JS libraries)
+- Changing the technology stack or infrastructure
+- Adding new domain concepts or models
+- Restructuring directories or namespaces
+- Adding new build, test, or deployment commands
+- Changing authentication, authorization, or API patterns
+
+`README.md` is meant for people to read to learn how to boostrap and deploy the app along with a brief general overview of the project. Only update it with applicable information.
+
+# Features
+
+## MP3 Library Management
+
+### Scanning & Import
+
+- Scan library directory for MP3 files (background job with real-time progress)
+- Automatic metadata extraction from ID3 tags (title, artist, album, genre, year, track number, disc number)
+- Default to filename if no title tag found
+- Automatic sync: removes database entries when files are deleted from disk
+- Real-time sync progress via WebSocket (ActionCable)
+- Sync progress bar below navigation with stable counter (current/total) and current filename
+- Color-coded status text: blue (running), green (completed), red (failed)
+- Completed status auto-hides after 5 seconds
+- Sync button disabled while sync is running
+- Re-syncing updates existing song metadata instead of skipping
+- Per-file error handling: individual import failures are logged without aborting the sync
+- MP3 tag string sanitization (invalid UTF-8, null characters)
+
+## User Interface
+
+- Moderately dark professional theme
+- Toast notifications for user actions
+- Whenever possible, instead of full pages and full redirects with forms, render interfaces in large browser-based modals. On successful submission, dismiss the modal so the user remains on the original song list page. Refresh any active filters and current pagination to reflect changes to the user. Utilize Turbo streams, actions, and frames as needed.
+- Responsive layout and mobile-friendly though the focus should be desktop
+- Prefer blues for accent theme colors
+
+### Metadata Editing
+
+- Edit song metadata: title, artist, album, genre, year, disc number, track number
+- Changes to database records should always be reflected on the file metadata
+- Album art upload and management
+- Inline editing on song list (double-click to edit cells)
+- ID3v1 and ID3v2 tag writing with APIC frame support for album art
+
+### Bulk Operations
+
+- Multi-select songs with checkboxes
+- Bulk update metadata fields and album art assignment across multiple songs
+- Select all / deselect all functionality
+- Selection count indicator
+
+### File Organization
+
+- Reorganize files using customizable path templates
+- Template tokens: `<Artist>`, `<Album>`, `<Title>`, `<Genre>`, `<Year>`, `<Disc>`, `<Track>`, `<Track:N>` (zero-padded), `<Filename>`
+- Preview changes before applying
+- Automatic directory creation
+- Filename sanitization (removes illegal characters)
+
+### Upload
+
+- Drag-and-drop upload page for MP3 files and folders
+- Files saved to `_NEW/` directory inside the library root
+- Folder structure from dragged directories is preserved
+- Metadata extracted automatically and Song records created
+- Click-to-browse fallback via hidden file input
+- Client-side progress tracking: progress bar, counter (completed/total), scrollable message log
+- Summary shown on completion with success/failure counts
+- Path traversal prevention on server side
+- Duplicate file handling via `find_or_initialize_by` on file path
+- Real-time server broadcast via `UploadChannel` (ActionCable)
+- Non-MP3 files rejected with error response
+- Upload link in navigation bar
+
+### Song Removal
+
+- Delete song from library and file permanently from disk
+
+## Search & Filtering
+
+### Global Search
+
+- Single search field searches across title, artist, album, and genre
+- Real-time search as-you-type with debounce
+- Clear button to reset search
+
+### Advanced Filters
+
+- Individual filter fields for title, artist, album, genre, year, file path
+- File path filter properly escapes underscores (_) in the query while searching
+- Combine multiple filters simultaneously
+- Sort by any column
+- Filter by missing metadata (songs without artist, album, genre, or year)
+
+### Pagination
+
+- Paginated results with count display
+

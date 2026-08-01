@@ -1,1 +1,59 @@
 @import "tailwindcss";
+
+/* Moderately dark professional theme with blue accents.
+   Tailwind v4 is CSS-first: these custom properties generate the utility
+   classes (bg-surface-800, text-accent-400, ...) -- there is no JS config. */
+@theme {
+  --color-surface-950: oklch(0.17 0.012 260);
+  --color-surface-900: oklch(0.21 0.014 260);
+  --color-surface-850: oklch(0.25 0.015 260);
+  --color-surface-800: oklch(0.29 0.016 260);
+  --color-surface-700: oklch(0.37 0.018 260);
+  --color-surface-600: oklch(0.47 0.019 260);
+  --color-surface-500: oklch(0.58 0.02 260);
+  --color-surface-400: oklch(0.69 0.018 260);
+  --color-surface-300: oklch(0.8 0.014 260);
+  --color-surface-200: oklch(0.88 0.01 260);
+  --color-surface-100: oklch(0.94 0.006 260);
+
+  --color-accent-700: oklch(0.48 0.16 250);
+  --color-accent-600: oklch(0.56 0.18 250);
+  --color-accent-500: oklch(0.64 0.18 250);
+  --color-accent-400: oklch(0.72 0.15 250);
+  --color-accent-300: oklch(0.81 0.11 250);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Small component layer so feature views stop repeating twelve-class strings. */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-surface-700
+           bg-surface-800 px-3 py-1.5 text-sm font-medium text-surface-100 transition
+           hover:bg-surface-700 focus-visible:outline-2 focus-visible:outline-offset-2
+           focus-visible:outline-accent-500 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-accent-600 bg-accent-600 text-white hover:bg-accent-500;
+  }
+
+  .btn-danger {
+    @apply border-red-700 bg-red-700 text-white hover:bg-red-600;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-surface-700 bg-surface-900 px-3 py-1.5 text-sm
+           text-surface-100 placeholder:text-surface-500 focus:border-accent-500
+           focus:outline-2 focus:outline-offset-0 focus:outline-accent-500;
+  }
+
+  .label {
+    @apply mb-1 block text-xs font-medium tracking-wide text-surface-400 uppercase;
+  }
+
+  .card {
+    @apply rounded-lg border border-surface-800 bg-surface-900 shadow-lg shadow-black/20;
+  }
+}

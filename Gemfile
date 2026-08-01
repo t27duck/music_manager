@@ -61,3 +61,7 @@ end
 
 gem "kaminari"
 gem "ransack"
+
+# Read and write ID3v1/ID3v2 tags, including APIC album art. The ruby_34 branch of
+# this fork is the one that survives Ruby 3.4+ frozen string literals.
+gem "ruby-mp3info", github: "t27duck/ruby-mp3info", branch: "ruby_34", require: "mp3info"

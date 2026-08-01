@@ -23,9 +23,35 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
-    <main class="container mx-auto mt-28 px-5 flex">
+  <body class="min-h-screen bg-surface-950 font-sans text-surface-100 antialiased">
+    <header class="sticky top-0 z-30 border-b border-surface-800 bg-surface-900/95 backdrop-blur">
+      <nav class="container mx-auto flex items-center gap-6 px-5 py-3">
+        <%= link_to "/", class: "flex items-center gap-2 font-semibold tracking-tight text-surface-100" do %>
+          <span class="text-accent-400" aria-hidden="true">&#9835;</span>
+          MusicManager
+        <% end %>
+
+        <div class="flex flex-1 items-center gap-1">
+          <%# Feature navigation is added as each step lands. %>
+        </div>
+
+        <%# Replaced by the sync broadcast; see app/views/syncs/. %>
+        <span id="sync_button"></span>
+      </nav>
+    </header>
+
+    <%# Library sync progress bar, broadcast into place while a sync runs. %>
+    <div id="sync_status"></div>
+
+    <main class="container mx-auto px-5 py-8">
       <%= yield %>
     </main>
+
+    <%= turbo_frame_tag "modal" %>
+
+    <div id="toasts" class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 flex-col gap-2"
+         aria-live="polite" aria-atomic="false">
+      <%= render "shared/flashes" %>
+    </div>
   </body>
 </html>

@@ -1,0 +1,12 @@
+<%# Renders one toast. `level` is a flash key: notice, alert, or error. %>
+<div class="pointer-events-auto flex items-start gap-3 rounded-lg border px-4 py-3 text-sm shadow-lg shadow-black/30 transition duration-300 <%= toast_classes(level) %>"
+     role="status"
+     data-controller="toast"
+     data-toast-target="root">
+  <span class="flex-1"><%= message %></span>
+
+  <button type="button"
+          class="shrink-0 rounded text-lg leading-none opacity-60 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2"
+          aria-label="Dismiss notification"
+          data-action="toast#dismiss">&times;</button>
+</div>
