@@ -1,4 +1,25 @@
 module SongsHelper
+  # A sortable column heading. Ransack renders the link and appends its own
+  # direction arrow; this only supplies the styling.
+  def sort_header(query, attribute, label)
+    sort_link(query, attribute, label,
+      class: "inline-flex items-center gap-1 transition hover:text-surface-100",
+      data: { turbo_frame: "songs" })
+  end
+
+  # Whether the user has narrowed the list at all. Sorting does not count: it
+  # changes the order, not which songs are shown.
+  def filters_active?(query)
+    query.conditions.any? || query.missing_metadata.present? || query.file_path_contains.present?
+  end
+
+  # Whether anything in the collapsible panel is set, which decides if it opens.
+  def advanced_filters_active?(query)
+    return true if query.missing_metadata.present? || query.file_path_contains.present?
+
+    [ query.title_cont, query.artist_cont, query.album_cont, query.genre_cont, query.year_eq ].any?(&:present?)
+  end
+
   # 154 -> "2:34", 3725 -> "1:02:05". Blank durations render as a dash so the
   # column stays aligned.
   def formatted_duration(seconds)

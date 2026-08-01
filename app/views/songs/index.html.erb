@@ -1,11 +1,13 @@
 <% content_for :title, "Songs" %>
 
-<div class="mb-6">
+<div class="mb-5">
   <h1 class="text-2xl font-semibold tracking-tight">Songs</h1>
 </div>
 
+<%= render "songs/search", query: @query %>
+
 <%# The count lives inside the frame so it can never disagree with the rows
-    currently rendered -- paging and, later, filtering replace both together. %>
+    currently rendered -- filtering and paging replace both together. %>
 <%= turbo_frame_tag "songs", data: { turbo_action: "advance" } do %>
-  <%= render "songs/list", songs: @songs %>
+  <%= render "songs/list", songs: @songs, query: @query %>
 <% end %>

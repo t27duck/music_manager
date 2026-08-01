@@ -8,13 +8,13 @@
       <table class="w-full text-left text-sm">
         <thead class="border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase">
           <tr>
-            <th scope="col" class="px-4 py-3 font-medium">Title</th>
-            <th scope="col" class="px-4 py-3 font-medium">Artist</th>
-            <th scope="col" class="px-4 py-3 font-medium">Album</th>
-            <th scope="col" class="px-4 py-3 font-medium">Genre</th>
-            <th scope="col" class="px-4 py-3 font-medium">Year</th>
-            <th scope="col" class="px-4 py-3 text-right font-medium">Track</th>
-            <th scope="col" class="px-4 py-3 text-right font-medium">Length</th>
+            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :title, "Title" %></th>
+            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :artist, "Artist" %></th>
+            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :album, "Album" %></th>
+            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :genre, "Genre" %></th>
+            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
+            <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :track_number, "Track" %></th>
+            <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :duration, "Length" %></th>
           </tr>
         </thead>
 
@@ -26,6 +26,8 @@
   </div>
 
   <%= paginate songs %>
+<% elsif filters_active?(query) %>
+  <%= render "songs/no_results" %>
 <% else %>
   <%= render "songs/empty" %>
 <% end %>

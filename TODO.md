@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 5 — Search & filtering
-- **Last completed:** Step 4 — Library sync
+- **Working on:** Step 6 — Edit modal + deletion
+- **Last completed:** Step 5 — Search & filtering
 - **Blocked on:** nothing
 
 ---
@@ -77,11 +77,20 @@ file is the **plan** (what order, what is done, what is known-broken).
   - [x] `sync_status_controller.js` polls `syncs#show` while running, as a fallback for
         broadcasts missed during a page reload or cable reconnect
 
-- [ ] **Step 5 — Search & filtering**
-  - [ ] `ransackable_attributes` / `ransackable_scopes`; global `title_or_artist_or_album_or_genre_cont`
-  - [ ] Debounced search form + clear button; collapsible advanced filter panel
-  - [ ] File path filter escaping `_` (SQL LIKE wildcard)
-  - [ ] `sort_link` on every column; missing-metadata filter
+- [x] **Step 5 — Search & filtering**
+  - [x] `ransackable_attributes` / `ransortable_attributes` / `ransackable_scopes`; global
+        `title_or_artist_or_album_or_genre_cont`
+  - [x] Debounced search form + clear button; collapsible `<details>` advanced panel that opens
+        itself when a filter is active
+  - [x] `file_path_contains` scope escaping `_` and `%` (`LIKE ... ESCAPE`)
+  - [x] `sort_link` on every column; `missing_metadata` scope
+  - [x] Distinct "no results" state, separate from the empty-library state
+  - [x] `SongsController::SEARCH_KEYS` explicit permit (brakeman flagged `permit!`)
+  - Notes: the search form sits **outside** the `songs` frame, so it is not re-rendered on submit.
+    Anything in it whose visibility depends on state (the clear ×, the Reset link) must be toggled
+    in `filter_form_controller.js` — a server-rendered conditional there is stale the moment the
+    user types. Default ordering stays `Song.ordered`; Ransack only takes over once `q[s]` is set,
+    because the natural order is four columns deep.
 
 - [ ] **Step 6 — Edit modal + deletion**
   - [ ] `SongsController#edit/#update/#destroy`; `shared/_modal` + `modal_controller.js`
@@ -161,6 +170,9 @@ test group. Coverage after step 4 is ~98%.
 - [ ] Move `FileOrganizer#apply!` into a job if selections grow large enough to time out a request.
 - [ ] Persist the path template as a `Setting` record instead of `session`.
 - [ ] Skip re-reading tags during sync when `file_modified_at` is unchanged (needs a "force rescan" escape hatch).
+- [ ] Ransack's built-in `cont` does not escape `_`/`%` for the title/artist/album/genre filters
+      either — only `file_path_contains` does, since that is what the spec calls out and where
+      underscores actually hurt. Fixing it generally needs a custom predicate that emits `ESCAPE`.
 
 ## Known issues / gotchas
 
@@ -179,6 +191,12 @@ test group. Coverage after step 4 is ~98%.
   `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
 - Rendering a partial from a controller needs `render partial: "syncs/update"`. Plain
   `render "syncs/update"` looks for a *template* and raises `MissingTemplate`.
+- `hidden="<%= false %>"` still hides the element — any value of `hidden` counts in HTML. Use
+  `<%= "hidden" if condition %>` in raw tags; Rails' own tag helpers handle `hidden: false` correctly.
+- Enumerating rows right after a Turbo frame swap raises `StaleElementReferenceError`. Wait for the
+  new state with a retrying matcher (`assert_selector "tbody tr:first-child", text: ...`) first.
+- Ransack `sort_link` URL-encodes its params, so hrefs read `q%5Bs%5D=title+asc`, and they resolve
+  to `/` rather than `/songs` because root maps to the same action.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is
