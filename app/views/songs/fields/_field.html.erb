@@ -1,0 +1,10 @@
+<%# The read-only state of an editable cell. Double-clicking swaps in the input. %>
+<%= turbo_frame_tag dom_id(song, name) do %>
+  <div class="-mx-1 cursor-text rounded px-1 py-0.5 transition hover:bg-surface-800"
+       title="Double-click to edit"
+       data-controller="inline-edit"
+       data-inline-edit-url-value="<%= edit_song_field_path(song, name) %>"
+       data-action="dblclick->inline-edit#edit">
+    <%= metadata_value song.public_send(name) %>
+  </div>
+<% end %>

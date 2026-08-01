@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 7 — Inline editing
-- **Last completed:** Step 6 — Edit modal + deletion
+- **Working on:** Step 8 — Album art
+- **Last completed:** Step 7 — Inline editing
 - **Blocked on:** nothing
 
 ---
@@ -102,10 +102,17 @@ file is the **plan** (what order, what is done, what is known-broken).
   - Notes: `shared/_modal` is reusable — render with `render layout: "shared/modal"`. Steps 9 and
     10 should use it rather than rolling their own.
 
-- [ ] **Step 7 — Inline editing**
-  - [ ] `Songs::FieldsController` (`edit`/`update`, `param: :name`, allow-listed against
-        `Song::EDITABLE_FIELDS`)
-  - [ ] Per-cell turbo frames; `inline_edit_controller.js` on `dblclick`, Esc/blur cancels
+- [x] **Step 7 — Inline editing**
+  - [x] `Songs::FieldsController` (`show`/`edit`/`update`, `param: :name`, allow-listed against
+        `Song::EDITABLE_FIELDS`; anything else 404s)
+  - [x] Per-cell turbo frames (`dom_id(song, name)`); `inline_edit_controller.js` on `dblclick`
+  - [x] Enter and blur save (spreadsheet behaviour), Escape discards
+  - [x] Failed tag writes re-render the input with the error inline
+  - Notes: `show` exists so Escape has something to restore the cell from — that is why the plan's
+    edit/update pair became a trio. Inline edits re-render **only the cell**, not the list, so a row
+    edited out of the current filter stays visible until the next load; that is deliberate, since
+    replacing the table mid-edit would defeat the point of editing in place. Use the modal when the
+    change should re-sort or re-filter.
 
 - [ ] **Step 8 — Album art**
   - [ ] `Mp3File#album_art`, `#album_art=`, `#remove_album_art`
@@ -206,6 +213,10 @@ test group. Coverage after step 4 is ~98%.
   browser silently drops it, so the button does nothing. Keep `button_to` outside `form_with`.
 - Hover-only controls (`opacity-0 group-hover:opacity-100`) are invisible to Capybara *and* to
   anyone on a touch device. Keep row actions visible and merely subdued.
+- `ActionController::RoutingError` raised in a controller is rescued into a 404 by the integration
+  stack (`show_exceptions = :rescuable`), so assert `:not_found` rather than `assert_raises`.
+- Escape-to-cancel also fires `blur`. Any "save on blur" handler needs a flag so the discarded
+  value is not written on the way out — see `inline_edit_controller.js`.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is

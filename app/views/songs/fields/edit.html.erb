@@ -1,0 +1,23 @@
+<%= turbo_frame_tag dom_id(@song, @name) do %>
+  <%= form_with model: @song,
+        url: song_field_path(@song, @name),
+        method: :patch,
+        data: {
+          controller: "inline-edit",
+          inline_edit_cancel_url_value: song_field_path(@song, @name),
+          action: "keydown.esc->inline-edit#cancel"
+        } do |form| %>
+
+    <%= form.text_field @name,
+          value: @song.public_send(@name),
+          class: "input px-1.5 py-0.5 text-sm",
+          autocomplete: "off",
+          autofocus: true,
+          aria: { label: @name.humanize },
+          data: { action: "blur->inline-edit#save" } %>
+
+    <% if @song.errors.any? %>
+      <p class="mt-1 text-xs text-red-400" role="alert"><%= @song.errors.full_messages.to_sentence %></p>
+    <% end %>
+  <% end %>
+<% end %>

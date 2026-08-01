@@ -3,7 +3,13 @@ Rails.application.routes.draw do
 
   root "songs#index"
 
-  resources :songs, only: [ :index, :edit, :update, :destroy ]
+  resources :songs, only: [ :index, :edit, :update, :destroy ] do
+    scope module: :songs do
+      # One editable cell in the song list. #show is the read-only cell, #edit
+      # swaps in the input, #update saves it.
+      resources :fields, only: [ :show, :edit, :update ], param: :name
+    end
+  end
 
   # Library scan. #create enqueues the job, #show reports current progress.
   resource :sync, only: [ :show, :create ]
