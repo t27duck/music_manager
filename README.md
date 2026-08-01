@@ -8,6 +8,25 @@ from a browser, with no external services.
 Built with Rails 8.1 on Ruby 4.0: Hotwire (Turbo + Stimulus) over import maps,
 TailwindCSS v4, SQLite, and SolidQueue/SolidCache/SolidCable in production.
 
+## What it does
+
+- **Sync** — scans `LIBRARY_ROOT` for MP3s, reads their ID3 tags, and removes
+  songs whose files are gone. Progress streams to the browser live, and one
+  unreadable file is reported rather than aborting the run.
+- **Browse** — sortable, paginated list with search-as-you-type across title,
+  artist, album and genre, plus filters for individual fields, file path, and
+  missing metadata.
+- **Edit** — a modal for the full record, or double-click any cell to edit it in
+  place. Every change is written back into the file's ID3v1 and ID3v2 tags; if
+  the file cannot be written, the database is not changed either.
+- **Album art** — view, replace and remove the embedded APIC image.
+- **Bulk edit** — select songs and apply metadata or artwork to all of them,
+  with per-song failures reported rather than silently swallowed.
+- **Organize** — re-file songs under a path template such as
+  `<Artist>/<Album>/<Track:2> - <Title>`, previewed before anything moves.
+- **Upload** — drag in files or whole folders; they land in `_NEW/` keeping
+  their structure, and are imported as they arrive.
+
 ## Requirements
 
 - Ruby 4.0.6 (see `.ruby-version`)
@@ -43,6 +62,15 @@ The library directory is gitignored — it holds your music, not source.
 ```bash
 LIBRARY_ROOT=/media/music bin/dev
 ```
+
+There is nothing to seed: every song is derived from a file on disk. Point
+`LIBRARY_ROOT` at your music and run a sync, either from the **Sync library**
+button or with `bin/rails runner 'LibrarySync.call'`.
+
+MusicManager writes to your files. It only ever touches MP3s inside
+`LIBRARY_ROOT`, but tags are rewritten in place and *Delete song* removes the
+file from disk — keep a backup you trust before pointing it at an irreplaceable
+library.
 
 ## Testing
 

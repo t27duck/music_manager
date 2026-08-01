@@ -21,49 +21,40 @@ bin/rails console      # Rails console
 
 ### Test Patterns for File Operations
 
-Tests that manipulate files (sync, organize, bulk operations) use temp directory isolation for parallel safety:
-Test environment uses `test/library/` as the library root.
-Cover image file and mp3 file fixtures at `test/fixtures/files/`.
+Tests that manipulate files (sync, organize, bulk operations) `include LibraryTestHelper`
+(`test/support/library_test_helper.rb`). It gives each test its own temp directory as the library
+root, so tests never see each other's files and never touch the real library:
 
 ```ruby
-setup do
-  @temp_dir = Dir.mktmpdir("test_name_#{Process.pid}_#{Thread.current.object_id}")
-  @original_library_root = Configuration.library_root
-  Configuration.instance_variable_set(:@library_root, @temp_dir)
-end
+class SomethingTest < ActiveSupport::TestCase
+  include LibraryTestHelper
 
-teardown do
-  Configuration.instance_variable_set(:@library_root, @original_library_root)
-  FileUtils.remove_entry(@temp_dir) if @temp_dir && Dir.exist?(@temp_dir)
+  test "..." do
+    song = create_test_song("Artist/Album/track.mp3", title: "Midnight Drive", year: 2021)
+    # @temp_dir is the library root for the duration of the test
+  end
 end
 ```
 
-Helper to create test songs with actual MP3 files:
+What the helper provides:
 
-```ruby
-def create_test_song(fixture_name, dest_subpath, attrs = {})
-  source = Rails.root.join("test/fixtures/files/#{fixture_name}")
-  dest = File.join(@temp_dir, dest_subpath)
-  FileUtils.mkdir_p(File.dirname(dest))
-  FileUtils.cp(source, dest)
-
-  Song.create!(
-    title: attrs[:title] || "Test Song",
-    artist: attrs[:artist] || "Test Artist",
-    file_path: dest,
-    file_size: File.size(dest),
-    duration: 180,
-    **attrs.slice(:album, :genre, :year, :track_number)
-  )
-end
-```
+| Method | Purpose |
+|---|---|
+| `create_test_song(subpath, **attributes)` | Copies a fixture MP3 into the temp library and creates the Song. Attributes are **keywords**, not a positional hash. Passes `skip_tag_write`, so the file keeps the fixture's own tags. |
+| `copy_fixture(subpath, fixture_name:)` | Just the file, no record. |
+| `fixture_file(name)` | Absolute path to a file in `test/fixtures/files/`. |
+| `songs_in_temp_dir` | `Song.in_library(@temp_dir)` — scope queries when testing something that operates on the whole library. |
+| `tags_on_disk(path)` | Reads tags straight back off the file, bypassing the database. |
 
 Key points:
-- Each test gets a unique temp directory (includes PID + thread ID for parallel safety)
-- Stub `Configuration.library_root` to isolate tests from real library directory
-- Copy fixture MP3s into temp directory for file operation tests
-- Always clean up temp directories in teardown
-- Use `songs_in_temp_dir` helper to scope queries when testing jobs that affect all songs
+- Each test gets a unique temp directory (includes PID + thread ID for parallel safety); setup and
+  teardown stub and restore `Configuration.library_root` and clear the cache.
+- The test environment defaults the library root to `test/library/`, so a test that forgets to
+  include the helper scans an empty directory rather than the real library.
+- Fixtures live at `test/fixtures/files/`: `song 1.mp3` … `song 8.mp3` and `cover.jpg`. Note that
+  `cover.jpg` is **actually a PNG**, and is byte-identical to the art already embedded in the MP3
+  fixtures — a test needing *different* artwork must supply its own.
+- There is deliberately no `songs.yml` fixture: a Song is only meaningful next to a real file.
 
 ## Linting & CI
 

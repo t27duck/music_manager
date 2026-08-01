@@ -1,4 +1,7 @@
+<%# Announced: the sync runs in the background and its progress is otherwise
+    only conveyed visually. %>
 <div id="sync_status"
+     aria-live="polite"
      data-controller="sync-status"
      data-sync-status-running-value="<%= status&.running? || false %>"
      data-sync-status-url-value="<%= sync_path %>">

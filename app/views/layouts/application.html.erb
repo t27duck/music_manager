@@ -31,8 +31,13 @@
     <%# Live library sync progress; see app/models/library_sync.rb. %>
     <%= turbo_stream_from LibrarySync::STREAM %>
 
+    <a href="#main"
+       class="sr-only rounded-md bg-accent-600 px-4 py-2 font-medium text-white focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50">
+      Skip to content
+    </a>
+
     <header class="sticky top-0 z-30 border-b border-surface-800 bg-surface-900/95 backdrop-blur">
-      <nav class="container mx-auto flex items-center gap-6 px-5 py-3">
+      <nav class="container mx-auto flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
         <%= link_to root_path, class: "flex items-center gap-2 font-semibold tracking-tight text-surface-100" do %>
           <span class="text-accent-400" aria-hidden="true">&#9835;</span>
           MusicManager
@@ -49,7 +54,7 @@
 
     <%= render "syncs/status", status: LibrarySync.status %>
 
-    <main class="container mx-auto px-5 py-8">
+    <main id="main" class="container mx-auto px-5 py-8">
       <%= yield %>
     </main>
 

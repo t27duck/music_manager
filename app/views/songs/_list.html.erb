@@ -2,7 +2,9 @@
      data-selection-url-value="<%= new_bulk_update_path(**list_state_params) %>"
      data-selection-organize-url-value="<%= new_file_organization_path(**list_state_params) %>">
   <div class="mb-3 flex min-h-8 flex-wrap items-center justify-between gap-3">
-    <p class="text-sm text-surface-400" id="songs_count">
+    <%# Announced so a screen reader hears the result of a filter, which
+        otherwise changes the table silently. %>
+    <p class="text-sm text-surface-400" id="songs_count" aria-live="polite">
       <%= render "songs/count", songs: songs %>
     </p>
 
@@ -20,24 +22,30 @@
   <% if songs.any? %>
     <div class="card overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
+        <%# table-fixed so the columns divide the available width and the cells
+            can truncate; without it a two-hundred-character artist tag pushes
+            the last columns off the screen. Every column but the title is a
+            fixed width, and min-w is their sum plus a usable title, so the
+            title can never be squeezed to nothing on a narrow screen -- the
+            wrapper scrolls sideways instead. %>
+        <table class="w-full min-w-[1020px] table-fixed text-left text-sm" aria-label="Songs">
           <thead class="border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase">
             <tr>
-              <th scope="col" class="py-3 pl-4 pr-2">
+              <th scope="col" class="w-10 py-3 pl-4 pr-2">
                 <%= check_box_tag "toggle_all", "1", false,
                       class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500",
                       aria: { label: "Select all songs on this page" },
                       data: { selection_target: "toggleAll", action: "selection#toggleAll" } %>
               </th>
-              <th scope="col" class="py-3 pl-1 pr-0"><span class="sr-only">Album art</span></th>
+              <th scope="col" class="w-14 py-3 pl-1 pr-0"><span class="sr-only">Album art</span></th>
               <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :title, "Title" %></th>
-              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :artist, "Artist" %></th>
-              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :album, "Album" %></th>
-              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :genre, "Genre" %></th>
-              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
-              <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :track_number, "Track" %></th>
-              <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :duration, "Length" %></th>
-              <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+              <th scope="col" class="w-44 px-4 py-3 font-medium"><%= sort_header query, :artist, "Artist" %></th>
+              <th scope="col" class="w-44 px-4 py-3 font-medium"><%= sort_header query, :album, "Album" %></th>
+              <th scope="col" class="w-24 px-4 py-3 font-medium"><%= sort_header query, :genre, "Genre" %></th>
+              <th scope="col" class="w-16 px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
+              <th scope="col" class="w-16 px-4 py-3 text-right font-medium"><%= sort_header query, :track_number, "Track" %></th>
+              <th scope="col" class="w-20 px-4 py-3 text-right font-medium"><%= sort_header query, :duration, "Length" %></th>
+              <th scope="col" class="w-16 px-4 py-3"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
 

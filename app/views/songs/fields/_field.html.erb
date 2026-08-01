@@ -1,10 +1,16 @@
-<%# The read-only state of an editable cell. Double-clicking swaps in the input. %>
-<%= turbo_frame_tag dom_id(song, name) do %>
-  <div class="-mx-1 cursor-text rounded px-1 py-0.5 transition hover:bg-surface-800"
-       title="Double-click to edit"
+<%# The read-only state of an editable cell. Double-clicking swaps in the input.
+    Values are truncated to one line so rows stay a uniform height -- real tags
+    run to a couple of hundred characters -- with the full text on hover. %>
+<%= turbo_frame_tag dom_id(song, name), class: "block" do %>
+  <% value = song.public_send(name) %>
+  <%# No negative margin here: it would push the cell past its frame, and with
+      overflow visible that leaks all the way up to a horizontally scrolling
+      page on narrow screens. %>
+  <div class="truncate rounded px-1 py-0.5 transition hover:bg-surface-800"
+       title="<%= value.presence || "Double-click to edit" %>"
        data-controller="inline-edit"
        data-inline-edit-url-value="<%= edit_song_field_path(song, name) %>"
        data-action="dblclick->inline-edit#edit">
-    <%= metadata_value song.public_send(name) %>
+    <%= metadata_value value %>
   </div>
 <% end %>

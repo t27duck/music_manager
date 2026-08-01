@@ -11,11 +11,11 @@
     <%= render "songs/album_arts/preview", song: song, size: :small %>
   </td>
 
-  <td class="max-w-xs px-4 py-2.5 font-medium text-surface-100" title="<%= song.relative_path %>">
+  <td class="px-4 py-2.5 font-medium text-surface-100">
     <%= render "songs/fields/field", song: song, name: "title" %>
   </td>
-  <td class="max-w-xs px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "artist" %></td>
-  <td class="max-w-xs px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "album" %></td>
+  <td class="px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "artist" %></td>
+  <td class="px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "album" %></td>
   <td class="px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "genre" %></td>
   <td class="px-4 py-2.5 tabular-nums"><%= render "songs/fields/field", song: song, name: "year" %></td>
   <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_track song %></td>

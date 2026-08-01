@@ -18,9 +18,11 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 12 — Polish & hardening
-- **Last completed:** Step 11 — Upload
+- **Working on:** nothing — all twelve steps are done and every feature in `CLAUDE.md` is built.
+- **Last completed:** Step 12 — Polish & hardening
 - **Blocked on:** nothing
+
+Pick work from **Backlog / deferred** below, or add a step for anything new.
 
 ---
 
@@ -167,10 +169,22 @@ file is the **plan** (what order, what is done, what is known-broken).
     come from the server over cable, so what is reported is what actually happened to each file.
     Uploads are sequential on purpose.
 
-- [ ] **Step 12 — Polish & hardening**
-  - [ ] Cross-feature system tests, seeds, README pass
-  - [ ] Responsive/mobile pass, focus rings, `aria-live` on progress
-  - [ ] Full `bin/ci` + `bin/rails test:system`
+- [x] **Step 12 — Polish & hardening**
+  - [x] Checked against real library data (a copied slice, plus the 4,892-song dev database)
+  - [x] Table switched to `table-fixed` with a `min-w`, cells truncate again — a 205-character
+        artist tag was making rows nine lines tall and pushing columns off screen
+  - [x] Responsive pass at 390 / 768 / 1400; nav wraps; table scrolls inside its own wrapper and
+        the page itself never scrolls sideways
+  - [x] Accessibility pass + `test/system/accessibility_test.rb` to hold it: table `aria-label`,
+        `aria-live` on the song count and sync status, skip link, and an audit that every visible
+        control has an accessible name
+  - [x] `db/seeds.rb` documents that there is nothing to seed (songs come from disk)
+  - [x] README rewritten with a feature summary and a warning that the app rewrites and deletes
+        real files
+  - [x] `CLAUDE.md` test-helper docs corrected to match `LibraryTestHelper`
+  - [x] Full `bin/ci` green (~14s), 98% line coverage
+  - Notes: query timings on the real 4,892-song library are all single-digit milliseconds
+    (first page 11 ms, search 4 ms, sort 2 ms), so the per-column indexes are pulling their weight.
 
 ---
 
@@ -206,6 +220,11 @@ than a huge `NOT IN (...)`.
 test group. Coverage after step 4 is ~98%.
 
 ## Backlog / deferred
+
+- [ ] Mobile shows the song table in a sideways-scrolling wrapper. Fine for a desktop-focused app,
+      but a card layout under `sm:` would be better if mobile use turns out to matter.
+- [ ] Selection is per-page and resets whenever the list re-renders. Selecting across pages would
+      need the ids held outside the frame.
 
 - [ ] `sync_runs` table if sync history ever needs auditing — `LibrarySync::Status` is already the right shape.
 - [ ] Move `FileOrganizer#apply!` into a job if selections grow large enough to time out a request.

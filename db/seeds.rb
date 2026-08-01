@@ -1,9 +1,12 @@
-# This file should ensure the existence of records required to run the application in every environment (production,
-# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
-# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
+# MusicManager has no reference data to seed: every Song is derived from a file
+# on disk, so the library itself is the source of truth.
 #
-# Example:
+# To populate the database, point LIBRARY_ROOT at your music and run a sync --
+# either from the "Sync library" button or here:
 #
-#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
-#     MovieGenre.find_or_create_by!(name: genre_name)
-#   end
+#   bin/rails runner 'LibrarySync.call'
+#
+# `db:seed:replant` (which bin/ci runs) therefore truncates and does nothing
+# further, which is the correct outcome: seeding must never invent songs that
+# have no file behind them.
+Rails.logger.info("Nothing to seed. Run a library sync to import songs from #{Configuration.library_root}.")
