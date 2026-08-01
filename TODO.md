@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 3 — Song index UI
-- **Last completed:** Step 2 — Song model + ID3 layer
+- **Working on:** Step 4 — Library sync
+- **Last completed:** Step 3 — Song index UI
 - **Blocked on:** nothing
 
 ---
@@ -52,12 +52,18 @@ file is the **plan** (what order, what is done, what is known-broken).
   - Notes: `create_test_song(subpath, **attributes)` takes keyword attributes, not a positional
     hash (`CLAUDE.md`'s sketch predates the real helper).
 
-- [ ] **Step 3 — Song index UI**
-  - [ ] `SongsController#index`, `root "songs#index"`, layout brand → `root_path`
-  - [ ] `songs/index.html.erb` + `_song.html.erb` rows inside `turbo_frame_tag "songs"`
-  - [ ] Kaminari views generated and themed; count display; empty state
-  - [ ] `songs_helper.rb` — duration, file size, relative path formatting
-  - [ ] `nav_link_to` helper (deferred from step 1 until there are real nav links)
+- [x] **Step 3 — Song index UI**
+  - [x] `SongsController#index`, `root "songs#index"`, layout brand → `root_path`
+  - [x] `songs/index.html.erb`, `_list`, `_song`, `_count`, `_empty` inside `turbo_frame_tag "songs"`
+  - [x] Kaminari views generated and themed (`.page-link` component class); `paginates_per 50`
+  - [x] `songs_helper.rb` — `formatted_duration`, `formatted_file_size`, `formatted_track`,
+        `metadata_value`
+  - [x] `nav_link_to` helper (deferred from step 1 until there were real nav links)
+  - [x] First system tests, running against the selenium container
+  - Notes: the count/pagination indicator lives **inside** the `songs` frame. Anything that must
+    stay in step with the rendered rows has to be in that frame — a system test caught the count
+    going stale when it sat outside. Songs with a NULL artist sort first (SQLite NULLS FIRST),
+    which usefully surfaces untagged files.
 
 - [ ] **Step 4 — Library sync**
   - [ ] `LibraryScanner`, `LibrarySync` + `LibrarySync::Status`, `LibrarySyncJob`
@@ -136,6 +142,11 @@ than a huge `NOT IN (...)`.
 | No `sync_runs` / `uploads` tables | Sync progress is transient: `Rails.cache` + a cable broadcast. Upload progress is entirely client-side. |
 | Turbo Streams for sync, raw cable JSON for upload | Sync state is server-side and its markup is non-trivial; upload state (file list, per-file XHR progress, counter, summary) is already owned by the browser. |
 | ID3 POROs live in `app/models` | Rails-omakase keeps POROs there; avoids a new autoload root. `Mp3File` is the only class that touches `Mp3Info`. |
+
+## Testing tools
+
+`simplecov` (report at `coverage/index.html`, gitignored) and `minitest-mock` are available in the
+test group. Coverage after step 3 is ~96%.
 
 ## Backlog / deferred
 

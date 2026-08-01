@@ -1,0 +1,7 @@
+<%# Link showing page number -%>
+<% if page.current? %>
+  <span class="rounded-md border border-accent-600 bg-accent-600 px-3 py-1.5 text-sm font-medium text-white"
+        aria-current="page"><%= page %></span>
+<% else %>
+  <%= link_to page, url, remote: remote, rel: page.rel, class: "page-link" %>
+<% end %>

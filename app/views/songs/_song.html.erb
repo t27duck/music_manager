@@ -1,0 +1,11 @@
+<tr id="<%= dom_id(song) %>" class="transition hover:bg-surface-850/60">
+  <td class="max-w-xs truncate px-4 py-2.5 font-medium text-surface-100" title="<%= song.relative_path %>">
+    <%= metadata_value song.title %>
+  </td>
+  <td class="max-w-xs truncate px-4 py-2.5"><%= metadata_value song.artist %></td>
+  <td class="max-w-xs truncate px-4 py-2.5"><%= metadata_value song.album %></td>
+  <td class="px-4 py-2.5"><%= metadata_value song.genre %></td>
+  <td class="px-4 py-2.5 tabular-nums"><%= metadata_value song.year %></td>
+  <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_track song %></td>
+  <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_duration song.duration %></td>
+</tr>

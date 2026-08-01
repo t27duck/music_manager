@@ -57,6 +57,9 @@ group :test do
   # Use system testing [https://guides.rubyonrails.org/testing.html#system-testing]
   gem "capybara"
   gem "selenium-webdriver"
+
+  gem "minitest-mock" # Mocking/stubbing library for Minitest.
+  gem "simplecov", require: false # Coverage analysis for exercised code in tests.
 end
 
 gem "kaminari"

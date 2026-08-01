@@ -1,0 +1,3 @@
+<%# Link to the "Last" page -%>
+<%= link_to_unless current_page.last?, t("views.pagination.last").html_safe, url,
+      remote: remote, class: "page-link" %>

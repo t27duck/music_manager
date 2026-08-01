@@ -6,13 +6,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="application-name" content="Music Manager">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="turbo-prefetch" content="false">
+    <meta name="turbo-cache-control" content="no-preview">
+    <meta name="view-transition" content="same-origin">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+    <%# Enable PWA manifest for installable apps by uncommenting the route in
+        config/routes.rb and adding:
+        tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
 
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -26,13 +30,13 @@
   <body class="min-h-screen bg-surface-950 font-sans text-surface-100 antialiased">
     <header class="sticky top-0 z-30 border-b border-surface-800 bg-surface-900/95 backdrop-blur">
       <nav class="container mx-auto flex items-center gap-6 px-5 py-3">
-        <%= link_to "/", class: "flex items-center gap-2 font-semibold tracking-tight text-surface-100" do %>
+        <%= link_to root_path, class: "flex items-center gap-2 font-semibold tracking-tight text-surface-100" do %>
           <span class="text-accent-400" aria-hidden="true">&#9835;</span>
           MusicManager
         <% end %>
 
         <div class="flex flex-1 items-center gap-1">
-          <%# Feature navigation is added as each step lands. %>
+          <%= nav_link_to "Songs", root_path %>
         </div>
 
         <%# Replaced by the sync broadcast; see app/views/syncs/. %>

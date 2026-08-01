@@ -1,0 +1,31 @@
+<p class="mb-3 text-sm text-surface-400" id="songs_count">
+  <%= render "songs/count", songs: songs %>
+</p>
+
+<% if songs.any? %>
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead class="border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase">
+          <tr>
+            <th scope="col" class="px-4 py-3 font-medium">Title</th>
+            <th scope="col" class="px-4 py-3 font-medium">Artist</th>
+            <th scope="col" class="px-4 py-3 font-medium">Album</th>
+            <th scope="col" class="px-4 py-3 font-medium">Genre</th>
+            <th scope="col" class="px-4 py-3 font-medium">Year</th>
+            <th scope="col" class="px-4 py-3 text-right font-medium">Track</th>
+            <th scope="col" class="px-4 py-3 text-right font-medium">Length</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-surface-800">
+          <%= render partial: "songs/song", collection: songs %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%= paginate songs %>
+<% else %>
+  <%= render "songs/empty" %>
+<% end %>

@@ -41,6 +41,9 @@
 Thumbs.db
 .claude
 
+# SimpleCov output.
+/coverage/
+
 # The local MP3 library. Never committed -- it is the user's music, not source.
 /library/*
 !/library/.keep

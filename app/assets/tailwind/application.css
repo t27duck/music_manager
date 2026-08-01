@@ -56,4 +56,12 @@
   .card {
     @apply rounded-lg border border-surface-800 bg-surface-900 shadow-lg shadow-black/20;
   }
+
+  /* Kaminari pagination links; see app/views/kaminari/. */
+  .page-link {
+    @apply rounded-md border border-surface-700 bg-surface-800 px-3 py-1.5 text-sm
+           font-medium text-surface-300 transition hover:bg-surface-700
+           hover:text-surface-100 focus-visible:outline-2 focus-visible:outline-offset-2
+           focus-visible:outline-accent-500;
+  }
 }

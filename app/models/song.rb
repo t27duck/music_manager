@@ -23,6 +23,8 @@ class Song < ApplicationRecord
   before_save :write_tags_to_file, if: :tags_need_writing?
   after_save { self.skip_tag_write = false }
 
+  paginates_per 50
+
   scope :ordered, -> { order(:artist, :album, :disc_number, :track_number, :title) }
 
   def filename

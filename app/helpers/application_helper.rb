@@ -1,4 +1,15 @@
 module ApplicationHelper
+  # Navigation link that highlights itself when it points at the current page.
+  def nav_link_to(name, path, **options)
+    active = current_page?(path)
+    classes = [
+      "rounded-md px-3 py-1.5 text-sm font-medium transition",
+      active ? "bg-surface-800 text-surface-100" : "text-surface-400 hover:bg-surface-850 hover:text-surface-100"
+    ]
+
+    link_to name, path, **options, class: classes, aria: { current: ("page" if active) }
+  end
+
   # Border/background/text colours for a flash level.
   def toast_classes(level)
     case level.to_s

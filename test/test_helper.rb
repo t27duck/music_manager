@@ -1,4 +1,11 @@
 ENV["RAILS_ENV"] ||= "test"
+require "simplecov"
+
+SimpleCov.start "rails" do
+  skip "/lib/"
+  # group "Services", "app/services"
+end
+
 require_relative "../config/environment"
 require "rails/test_help"
 require "tmpdir"
@@ -16,6 +23,14 @@ module ActiveSupport
     # a real MP3 on disk, so tests build them with LibraryTestHelper#create_test_song
     # inside a per-test temp directory instead.
     fixtures :all
+
+    parallelize_setup do |worker|
+      SimpleCov.command_name "#{SimpleCov.command_name}-#{worker}"
+    end
+
+    parallelize_teardown do |_worker|
+      SimpleCov.result
+    end
 
     # Add more helper methods to be used by all tests here...
   end
