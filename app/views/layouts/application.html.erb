@@ -28,6 +28,9 @@
   </head>
 
   <body class="min-h-screen bg-surface-950 font-sans text-surface-100 antialiased">
+    <%# Live library sync progress; see app/models/library_sync.rb. %>
+    <%= turbo_stream_from LibrarySync::STREAM %>
+
     <header class="sticky top-0 z-30 border-b border-surface-800 bg-surface-900/95 backdrop-blur">
       <nav class="container mx-auto flex items-center gap-6 px-5 py-3">
         <%= link_to root_path, class: "flex items-center gap-2 font-semibold tracking-tight text-surface-100" do %>
@@ -39,13 +42,11 @@
           <%= nav_link_to "Songs", root_path %>
         </div>
 
-        <%# Replaced by the sync broadcast; see app/views/syncs/. %>
-        <span id="sync_button"></span>
+        <%= render "syncs/sync_button", status: LibrarySync.status %>
       </nav>
     </header>
 
-    <%# Library sync progress bar, broadcast into place while a sync runs. %>
-    <div id="sync_status"></div>
+    <%= render "syncs/status", status: LibrarySync.status %>
 
     <main class="container mx-auto px-5 py-8">
       <%= yield %>

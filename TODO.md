@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 4 — Library sync
-- **Last completed:** Step 3 — Song index UI
+- **Working on:** Step 5 — Search & filtering
+- **Last completed:** Step 4 — Library sync
 - **Blocked on:** nothing
 
 ---
@@ -65,13 +65,17 @@ file is the **plan** (what order, what is done, what is known-broken).
     going stale when it sat outside. Songs with a NULL artist sort first (SQLite NULLS FIRST),
     which usefully surfaces untagged files.
 
-- [ ] **Step 4 — Library sync**
-  - [ ] `LibraryScanner`, `LibrarySync` + `LibrarySync::Status`, `LibrarySyncJob`
-  - [ ] `SyncsController#show/#create`; `syncs/_status`, `_sync_button`, `_update.turbo_stream.erb`
-  - [ ] `turbo_stream_from "library_sync"` in the layout; auto-hide after 5s
-  - [ ] Prune songs whose files vanished; re-sync updates instead of skipping
-  - [ ] Per-file error isolation (one bad MP3 must not abort the run)
-  - [ ] `config/environments/test.rb`: `cache_store = :memory_store` (status must survive in-process)
+- [x] **Step 4 — Library sync**
+  - [x] `LibraryScanner`, `LibrarySync` + `LibrarySync::Status`, `LibrarySyncJob`
+  - [x] `SyncsController#show/#create`; `syncs/_status`, `_sync_button`, `_update.turbo_stream.erb`
+  - [x] `turbo_stream_from "library_sync"` in the layout; auto-hide after 5s
+  - [x] Prune songs whose files vanished; re-sync updates instead of skipping
+  - [x] Per-file error isolation (one bad MP3 must not abort the run) + error count in the bar
+  - [x] `config/environments/test.rb`: `cache_store = :memory_store`; `Rails.cache.clear` per test
+  - [x] `Song.in_library` scope, reused by pruning and by the test helper
+  - [x] `turbo_stream.refresh` on completion so the list is not left stale
+  - [x] `sync_status_controller.js` polls `syncs#show` while running, as a fallback for
+        broadcasts missed during a page reload or cable reconnect
 
 - [ ] **Step 5 — Search & filtering**
   - [ ] `ransackable_attributes` / `ransackable_scopes`; global `title_or_artist_or_album_or_genre_cont`
@@ -142,11 +146,14 @@ than a huge `NOT IN (...)`.
 | No `sync_runs` / `uploads` tables | Sync progress is transient: `Rails.cache` + a cable broadcast. Upload progress is entirely client-side. |
 | Turbo Streams for sync, raw cable JSON for upload | Sync state is server-side and its markup is non-trivial; upload state (file list, per-file XHR progress, counter, summary) is already owned by the browser. |
 | ID3 POROs live in `app/models` | Rails-omakase keeps POROs there; avoids a new autoload root. `Mp3File` is the only class that touches `Mp3Info`. |
+| `turbo_stream.refresh` after a sync, not broadcast rows | Each page reloads its *own* URL, so a viewer's filters and page number survive. Broadcasting rendered rows would clobber them. |
+| System tests use the `:async` job adapter; the rest of the suite keeps `:test` | System tests must let a job finish *after* the request that queued it — that is the only way "Sync complete" appearing in the browser proves the broadcast arrived rather than the POST response having said so. Set in `ApplicationSystemTestCase`, so unit tests can still `assert_enqueued_with`. |
+| `Capybara.default_max_wait_time = 10` | Every meaningful interaction is job + cable + re-render. The 2s default has too little headroom under load; raising it once beats scattering `wait:` through the tests. |
 
 ## Testing tools
 
 `simplecov` (report at `coverage/index.html`, gitignored) and `minitest-mock` are available in the
-test group. Coverage after step 3 is ~96%.
+test group. Coverage after step 4 is ~98%.
 
 ## Backlog / deferred
 
@@ -163,8 +170,15 @@ test group. Coverage after step 3 is ~96%.
 - The `ruby_34` branch of the mp3info fork is required; `master` is upstream 0.8.10 and breaks on
   Ruby 3.4+ frozen string literals.
 - **SQLite `LIKE` needs an explicit `ESCAPE`.** `sanitize_sql_like` inserts backslashes, but SQLite
-  ignores them unless the query says `LIKE ? ESCAPE ?`. Without it every `_` is a wildcard. This bit
-  `songs_in_temp_dir` already; step 5's file-path filter must do the same.
+  ignores them unless the query says `LIKE ? ESCAPE ?`. Without it every `_` is a wildcard. Encoded
+  once in `Song.in_library`; step 5's file-path filter must do the same.
+- **`Dir.glob` ignores `File::FNM_CASEFOLD`.** `Dir.glob("**/*.mp3", flags: File::FNM_CASEFOLD)`
+  silently misses `.MP3`, in both the keyword and positional forms. `LibraryScanner` globs `**/*`
+  and filters on `File.extname(...).downcase` instead.
+- `ActionCable::TestHelper` (for `assert_broadcasts`) and `ActiveJob::TestHelper` (for
+  `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
+- Rendering a partial from a controller needs `render partial: "syncs/update"`. Plain
+  `render "syncs/update"` looks for a *template* and raises `MissingTemplate`.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is

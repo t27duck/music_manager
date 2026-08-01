@@ -10,6 +10,30 @@ module ApplicationHelper
     link_to name, path, **options, class: classes, aria: { current: ("page" if active) }
   end
 
+  # Colour-coded sync status text: blue while running, green on success, red on
+  # failure.
+  def sync_status_color(status)
+    if status.failed? then "text-red-400"
+    elsif status.completed? then "text-emerald-400"
+    else "text-accent-400"
+    end
+  end
+
+  def sync_bar_color(status)
+    if status.failed? then "bg-red-500"
+    elsif status.completed? then "bg-emerald-500"
+    else "bg-accent-500"
+    end
+  end
+
+  def sync_status_message(status)
+    if status.failed? then "Sync failed"
+    elsif status.completed? then "Sync complete"
+    elsif status.total.zero? then "Scanning library…"
+    else "Syncing library…"
+    end
+  end
+
   # Border/background/text colours for a flash level.
   def toast_classes(level)
     case level.to_s

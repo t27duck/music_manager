@@ -1,0 +1,16 @@
+<%# Rendered by both the broadcast and SyncsController, so an open page and a
+    fresh page load always agree. %>
+<%= turbo_stream.replace "sync_status" do %>
+  <%= render "syncs/status", status: status %>
+<% end %>
+
+<%= turbo_stream.replace "sync_button" do %>
+  <%= render "syncs/sync_button", status: status %>
+<% end %>
+
+<%# A finished sync has changed the song list underneath whatever the viewer is
+    looking at. Refreshing rather than broadcasting rendered rows means each
+    page reloads its *own* URL, so filters and pagination are preserved. %>
+<% if status&.completed? %>
+  <%= turbo_stream.refresh %>
+<% end %>

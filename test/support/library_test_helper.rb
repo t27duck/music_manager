@@ -15,6 +15,10 @@ module LibraryTestHelper
       @temp_dir = Dir.mktmpdir("music_manager_#{Process.pid}_#{Thread.current.object_id}")
       @original_library_root = Configuration.library_root
       Configuration.instance_variable_set(:@library_root, @temp_dir)
+
+      # The sync status is a single global cache key; without this a sync in one
+      # test would still look "running" in the next.
+      Rails.cache.clear
     end
 
     teardown do
@@ -60,11 +64,8 @@ module LibraryTestHelper
 
   # Scopes a query to the current test's temp directory. Use this instead of
   # Song.all when asserting on jobs that operate over the whole library.
-  # Note the explicit ESCAPE: SQLite ignores the backslashes sanitize_sql_like
-  # inserts unless told what the escape character is, and temp directory names
-  # are full of underscores -- which LIKE would otherwise treat as wildcards.
   def songs_in_temp_dir
-    Song.where("file_path LIKE ? ESCAPE ?", "#{Song.sanitize_sql_like(@temp_dir)}/%", "\\")
+    Song.in_library(@temp_dir)
   end
 
   # Reads tags straight back off disk, bypassing the database.

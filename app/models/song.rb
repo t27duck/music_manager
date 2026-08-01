@@ -27,6 +27,14 @@ class Song < ApplicationRecord
 
   scope :ordered, -> { order(:artist, :album, :disc_number, :track_number, :title) }
 
+  # Songs whose file lives under the given library root. The explicit ESCAPE is
+  # required: sanitize_sql_like inserts backslashes, but SQLite ignores them
+  # unless told what the escape character is, and a path full of underscores
+  # would otherwise match far too much.
+  scope :in_library, ->(root = Configuration.library_root) {
+    where("file_path LIKE ? ESCAPE ?", "#{sanitize_sql_like(root)}/%", "\\")
+  }
+
   def filename
     File.basename(file_path.to_s)
   end
