@@ -2,7 +2,7 @@ module SongsHelper
   # The filters and page currently in effect, for links that must come back to
   # the same view of the list.
   def list_state_params
-    state = { q: params.fetch(:q, {}).permit(*SongsController::SEARCH_KEYS).to_h.compact_blank }
+    state = { q: params.fetch(:q, {}).permit(*SongListing::SEARCH_KEYS).to_h.compact_blank }
     state[:page] = params[:page] if params[:page].present?
     state.compact_blank
   end

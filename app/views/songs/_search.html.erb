@@ -5,7 +5,10 @@
         data: {
           controller: "filter-form",
           turbo_frame: "songs",
-          action: "input->filter-form#search change->filter-form#submit"
+          # Only `input`. Binding `change` here too would resubmit whenever a
+          # text field lost focus -- including when the user clicks a row
+          # checkbox, which would re-render the list and wipe their selection.
+          action: "input->filter-form#search"
         }
       } do |form| %>
 
@@ -68,10 +71,11 @@
 
       <div>
         <%= form.label :missing_metadata, "Missing metadata", class: "label" %>
+        <%# Discrete choice, so it submits at once rather than on the text debounce. %>
         <%= form.select :missing_metadata,
               Song::MISSING_METADATA_FIELDS.map { |field| [ "No #{field.humanize.downcase}", field ] },
               { include_blank: "Any" },
-              class: "input" %>
+              class: "input", data: { action: "filter-form#submit" } %>
       </div>
     </div>
 

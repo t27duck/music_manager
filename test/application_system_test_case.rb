@@ -6,6 +6,11 @@ require "test_helper"
 # raising it here is better than scattering `wait:` through the tests.
 Capybara.default_max_wait_time = 10
 
+# Resolve form controls by their accessible name, so `aria-label` counts. Table
+# checkboxes are labelled that way on purpose -- a visible label per row would
+# be noise -- and tests should find them the way a screen reader would.
+Capybara.enable_aria_label = true
+
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # System tests need jobs to really run, in a background thread, the way they
   # do in development -- a sync must be able to finish *after* the request that

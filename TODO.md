@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 9 — Bulk operations
-- **Last completed:** Step 8 — Album art
+- **Working on:** Step 10 — File organization
+- **Last completed:** Step 9 — Bulk operations
 - **Blocked on:** nothing
 
 ---
@@ -125,10 +125,17 @@ file is the **plan** (what order, what is done, what is known-broken).
     `expires_in 1.year, public: true` with an etag — the browser fetches each image exactly once.
     That beats storing multi-megabyte blobs in solid_cache, which has its own entry-size limits.
 
-- [ ] **Step 9 — Bulk operations**
-  - [ ] `selection_controller.js` — row checkboxes, select/deselect all, live count
-  - [ ] `BulkUpdatesController#new/#create` + `Song::BulkUpdate` PORO (only non-blank fields applied)
-  - [ ] Optional bulk album-art assignment; per-song error collection in the summary toast
+- [x] **Step 9 — Bulk operations**
+  - [x] `selection_controller.js` — row checkboxes, select/deselect all (with indeterminate state),
+        live count, clear
+  - [x] `BulkUpdatesController#new/#create` + `Song::BulkUpdate` PORO (only non-blank fields applied)
+  - [x] Bulk album-art assignment and removal; per-song failures reported in the summary toast
+  - [x] Extracted `SongListing` concern (`load_songs`, `search_params`, `SEARCH_KEYS`) now that a
+        second controller re-renders the list — step 10 should include it too
+  - Notes: the selection is **not** a form. The table holds per-cell inline-edit forms, and a form
+    wrapping the table would be nested markup the browser discards; `selection_controller.js`
+    collects the ids and appends them to the modal frame's URL instead. Title is deliberately not
+    a bulk field. Selection resets whenever the list re-renders, which is per-page by design.
 
 - [ ] **Step 10 — File organization**
   - [ ] `PathTemplate` — all tokens incl. `<Track:N>` and `<Filename>`; filename sanitization
@@ -231,6 +238,15 @@ test group. Coverage after step 4 is ~98%.
   `<label>`s — better for users anyway.
 - Don't select table cells by position (`td:first-child`); a new column silently breaks every such
   test. The per-cell turbo frames (`turbo-frame[id^='title_song_']`) are stable hooks.
+- **`form_with` only infers `multipart` from its own builder's `file_field`.** A standalone
+  `file_field_tag` does not flag the form, and the upload is silently dropped — pass
+  `multipart: true` explicitly.
+- Binding `change->…#submit` at *form* level makes every text field resubmit on blur, including
+  when the user clicks something else on the page. Bind `input` to the form and put `change`
+  handlers on the discrete controls (selects) themselves.
+- `Capybara.enable_aria_label = true` is set, so `aria-label` resolves controls — which is how a
+  screen reader finds them too. Table checkboxes are labelled that way rather than with visible
+  labels per row.
 - `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
   from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
 - ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is

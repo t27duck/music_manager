@@ -1,5 +1,13 @@
 <tr id="<%= dom_id(song) %>" class="group transition hover:bg-surface-850/60">
-  <td class="py-2 pl-4 pr-0">
+  <td class="py-2 pl-4 pr-2">
+    <%= check_box_tag "song_ids[]", song.id, false,
+          id: dom_id(song, :select),
+          class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500",
+          aria: { label: "Select #{song.title}" },
+          data: { selection_target: "checkbox", action: "selection#refresh" } %>
+  </td>
+
+  <td class="py-2 pl-1 pr-0">
     <%= render "songs/album_arts/preview", song: song, size: :small %>
   </td>
 

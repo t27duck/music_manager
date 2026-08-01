@@ -1,35 +1,54 @@
-<p class="mb-3 text-sm text-surface-400" id="songs_count">
-  <%= render "songs/count", songs: songs %>
-</p>
+<div data-controller="selection" data-selection-url-value="<%= new_bulk_update_path(**list_state_params) %>">
+  <div class="mb-3 flex min-h-8 flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-surface-400" id="songs_count">
+      <%= render "songs/count", songs: songs %>
+    </p>
 
-<% if songs.any? %>
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead class="border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase">
-          <tr>
-            <th scope="col" class="py-3 pl-4 pr-0"><span class="sr-only">Album art</span></th>
-            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :title, "Title" %></th>
-            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :artist, "Artist" %></th>
-            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :album, "Album" %></th>
-            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :genre, "Genre" %></th>
-            <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
-            <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :track_number, "Track" %></th>
-            <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :duration, "Length" %></th>
-            <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
-          </tr>
-        </thead>
+    <div class="flex items-center gap-2" data-selection-target="actions" hidden>
+      <span class="text-sm text-surface-300">
+        <span data-selection-target="count">0</span> selected
+      </span>
 
-        <tbody class="divide-y divide-surface-800">
-          <%= render partial: "songs/song", collection: songs %>
-        </tbody>
-      </table>
+      <button type="button" class="btn btn-primary" data-action="selection#edit">Edit selected</button>
+      <button type="button" class="btn" data-action="selection#clear">Clear</button>
     </div>
   </div>
 
-  <%= paginate songs %>
-<% elsif filters_active?(query) %>
-  <%= render "songs/no_results" %>
-<% else %>
-  <%= render "songs/empty" %>
-<% end %>
+  <% if songs.any? %>
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase">
+            <tr>
+              <th scope="col" class="py-3 pl-4 pr-2">
+                <%= check_box_tag "toggle_all", "1", false,
+                      class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500",
+                      aria: { label: "Select all songs on this page" },
+                      data: { selection_target: "toggleAll", action: "selection#toggleAll" } %>
+              </th>
+              <th scope="col" class="py-3 pl-1 pr-0"><span class="sr-only">Album art</span></th>
+              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :title, "Title" %></th>
+              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :artist, "Artist" %></th>
+              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :album, "Album" %></th>
+              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :genre, "Genre" %></th>
+              <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
+              <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :track_number, "Track" %></th>
+              <th scope="col" class="px-4 py-3 text-right font-medium"><%= sort_header query, :duration, "Length" %></th>
+              <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-surface-800">
+            <%= render partial: "songs/song", collection: songs %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <%= paginate songs %>
+  <% elsif filters_active?(query) %>
+    <%= render "songs/no_results" %>
+  <% else %>
+    <%= render "songs/empty" %>
+  <% end %>
+</div>

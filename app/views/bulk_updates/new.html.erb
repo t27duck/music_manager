@@ -1,0 +1,76 @@
+<%= turbo_frame_tag "modal" do %>
+  <%= render layout: "shared/modal", locals: { title: "Edit #{pluralize(@selected_songs.size, 'song')}" } do %>
+    <%# multipart is explicit: Rails only infers it from the form builder's own
+        file_field, and the art input below is a standalone file_field_tag. %>
+    <%= form_with url: bulk_updates_path, method: :post, multipart: true, class: "space-y-4" do |form| %>
+      <%= list_state_fields %>
+
+      <% @selected_songs.each do |song| %>
+        <%= hidden_field_tag "song_ids[]", song.id, id: nil %>
+      <% end %>
+
+      <% if @error.present? %>
+        <p class="rounded-md border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-100" role="alert">
+          <%= @error %>
+        </p>
+      <% end %>
+
+      <p class="text-sm text-surface-400">
+        Only the fields you fill in are changed. Anything left blank is left alone on every song.
+      </p>
+
+      <%= fields_for :bulk_update do |bulk| %>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <%= bulk.label :artist, class: "label" %>
+            <%= bulk.text_field :artist, class: "input", autofocus: true %>
+          </div>
+
+          <div>
+            <%= bulk.label :album, class: "label" %>
+            <%= bulk.text_field :album, class: "input" %>
+          </div>
+
+          <div>
+            <%= bulk.label :genre, class: "label" %>
+            <%= bulk.text_field :genre, class: "input" %>
+          </div>
+
+          <div>
+            <%= bulk.label :year, class: "label" %>
+            <%= bulk.number_field :year, class: "input", in: 1..9999 %>
+          </div>
+
+          <div>
+            <%= bulk.label :disc_number, "Disc", class: "label" %>
+            <%= bulk.number_field :disc_number, class: "input", min: 1 %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="border-t border-surface-800 pt-4">
+        <%= label_tag :album_art, "Album art", class: "label" %>
+        <%= file_field_tag :album_art,
+              accept: Song::ALBUM_ART_CONTENT_TYPES.join(","),
+              class: "block w-full text-xs text-surface-400 file:mr-3 file:rounded-md file:border-0 file:bg-surface-800 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-surface-100 hover:file:bg-surface-700" %>
+
+        <label class="mt-2 flex items-center gap-2 text-sm text-surface-400">
+          <%= check_box_tag :remove_album_art, "1", false,
+                class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500" %>
+          Remove existing album art instead
+        </label>
+      </div>
+
+      <div class="max-h-32 overflow-y-auto rounded-md border border-surface-800 bg-surface-950 px-3 py-2 text-xs text-surface-500">
+        <% @selected_songs.each do |song| %>
+          <p class="truncate"><%= song.title %> <span class="text-surface-600">— <%= song.relative_path %></span></p>
+        <% end %>
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-surface-800 pt-4">
+        <button type="button" class="btn" data-action="modal#close">Cancel</button>
+        <%= form.submit "Apply to #{pluralize(@selected_songs.size, 'song')}", class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
