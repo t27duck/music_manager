@@ -18,8 +18,8 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** Step 2 — Song model + ID3 layer
-- **Last completed:** Step 1 — Foundation & chrome
+- **Working on:** Step 3 — Song index UI
+- **Last completed:** Step 2 — Song model + ID3 layer
 - **Blocked on:** nothing
 
 ---
@@ -38,17 +38,19 @@ file is the **plan** (what order, what is done, what is known-broken).
   - Notes: mp3info verified read **and** write under Ruby 4.0; APIC art survives a tag rewrite.
     Layout brand links to `"/"` — swap to `root_path` in step 3 once the root route exists.
 
-- [ ] **Step 2 — Song model + ID3 layer**
-  - [ ] `CreateSongs` migration + `db/schema.rb` (see schema notes below)
-  - [ ] `Mp3File` — the only class that touches `Mp3Info`; read/write + string sanitization
-        (invalid UTF-8, NUL characters)
-  - [ ] `SongImporter.call(path)` — `find_or_initialize_by(file_path:)`, filename-without-extension
+- [x] **Step 2 — Song model + ID3 layer**
+  - [x] `CreateSongs` migration + `db/schema.rb` (see schema notes below)
+  - [x] `Mp3File` — the only class that touches `Mp3Info`; read/write, `sanitize_string`,
+        `image_content_type`, `album_art` reader
+  - [x] `SongImporter.call(path)` — `find_or_initialize_by(file_path:)`, filename-without-extension
         as the title fallback; sets `skip_tag_write`
-  - [ ] `Song` `after_save` tag write-through with `throw :abort` on failure
-  - [ ] `test/support/library_test_helper.rb` — temp-dir `setup`/`teardown`, `create_test_song`,
-        `songs_in_temp_dir` (per `CLAUDE.md`); required from `test_helper.rb`
-  - [ ] No `test/fixtures/songs.yml` — fixtures cannot point at real files and would leak across
+  - [x] `Song` `before_save` tag write-through with `throw :abort` on failure
+  - [x] `test/support/library_test_helper.rb` — temp-dir `setup`/`teardown`, `create_test_song`,
+        `songs_in_temp_dir`, `copy_fixture`, `tags_on_disk`; required from `test_helper.rb`
+  - [x] No `test/fixtures/songs.yml` — fixtures cannot point at real files and would leak across
         the temp-dir tests
+  - Notes: `create_test_song(subpath, **attributes)` takes keyword attributes, not a positional
+    hash (`CLAUDE.md`'s sketch predates the real helper).
 
 - [ ] **Step 3 — Song index UI**
   - [ ] `SongsController#index`, `root "songs#index"`, layout brand → `root_path`
@@ -129,7 +131,7 @@ than a huge `NOT IN (...)`.
 | Decision | Why |
 |---|---|
 | ActiveStorage stays disabled | Album art lives in the ID3 APIC frame. AS would add three tables, a second source of truth, and a "which wins when the file changes underneath us" problem. Uploads are handled in memory. |
-| `after_save` tag write, not `after_commit` | Runs inside the transaction, so `throw :abort` rolls the DB back and the database can never drift ahead of the file. The spec says changes should *always* be reflected in file metadata. |
+| `before_save` tag write, not `after_save`/`after_commit` | Rails only honours `throw :abort` in **before** callbacks — throwing it from `after_save` raises `UncaughtThrowError`. Writing first means a file we cannot write aborts the save and leaves the database untouched, which is the direction that matters: the database must never claim metadata the file does not have. (If the file write succeeds but the DB save then fails, the next sync re-reads the file and reconciles.) |
 | Dev/test stay on the `:async` job adapter | `config/cable.yml` uses the in-process `async` cable adapter in development; a separate solid_queue worker would broadcast progress into its own memory and the browser would never see it. There is also no dev `queue` database. Production already uses solid_queue + solid_cable. |
 | No `sync_runs` / `uploads` tables | Sync progress is transient: `Rails.cache` + a cable broadcast. Upload progress is entirely client-side. |
 | Turbo Streams for sync, raw cable JSON for upload | Sync state is server-side and its markup is non-trivial; upload state (file list, per-file XHR progress, counter, summary) is already owned by the browser. |
@@ -149,3 +151,15 @@ than a huge `NOT IN (...)`.
 - Fixture filenames contain spaces (`test/fixtures/files/song 1.mp3`) — always quote or `File.join`.
 - The `ruby_34` branch of the mp3info fork is required; `master` is upstream 0.8.10 and breaks on
   Ruby 3.4+ frozen string literals.
+- **SQLite `LIKE` needs an explicit `ESCAPE`.** `sanitize_sql_like` inserts backslashes, but SQLite
+  ignores them unless the query says `LIKE ? ESCAPE ?`. Without it every `_` is a wildcard. This bit
+  `songs_in_temp_dir` already; step 5's file-path filter must do the same.
+- `test/fixtures/files/cover.jpg` **is actually a PNG.** Album art content types must always come
+  from magic bytes (`Mp3File.image_content_type`), never from a filename or upload-supplied type.
+- ruby-mp3info refuses to *write* invalid UTF-8 and normalizes it on read, so tag sanitization is
+  tested directly against `Mp3File.sanitize_string` rather than through a crafted file — a
+  file-based test would pass without ever exercising the scrub path.
+- Clearing a tag needs an explicit delete from `tag`, `tag1` **and** the ID3v2 frame: ruby-mp3info
+  only copies truthy generic values on close, so assigning `nil` silently leaves the old frame.
+- Never write raw NUL bytes into Ruby source; use `"\u0000"`. A literal NUL makes `grep` treat the
+  file as binary.
