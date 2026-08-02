@@ -118,6 +118,67 @@ class LibrarySyncTest < ActiveSupport::TestCase
     assert_predicate Song.find_by(file_path: path).file_modified_at, :present?
   end
 
+  test "records one run per sync" do
+    copy_fixture("a.mp3")
+    copy_fixture("b.mp3")
+
+    assert_difference -> { SyncRun.count }, 1 do
+      LibrarySync.new(@temp_dir).call
+    end
+
+    run = SyncRun.recent.first
+    assert_predicate run, :completed?
+    assert_equal 2, run.total
+    assert_predicate run.finished_at, :present?
+  end
+
+  test "records a forced sync as a full rescan" do
+    copy_fixture("a.mp3")
+
+    LibrarySync.new(@temp_dir, force: true).call
+
+    assert_predicate SyncRun.recent.first, :forced?
+  end
+
+  test "records how many files were skipped" do
+    copy_fixture("a.mp3")
+    LibrarySync.new(@temp_dir).call
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal 1, SyncRun.recent.first.skipped
+  end
+
+  test "records the per-file errors of a tolerated failure" do
+    File.binwrite(File.join(@temp_dir, "broken.mp3"), "not audio")
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_match(/broken\.mp3/, SyncRun.recent.first.failures.first)
+  end
+
+  test "records a run that blew up as failed" do
+    copy_fixture("a.mp3")
+
+    SongImporter.stub(:call, ->(_) { raise "disk on fire" }) do
+      assert_raises(RuntimeError) { LibrarySync.new(@temp_dir).call }
+    end
+
+    assert_predicate SyncRun.recent.first, :failed?
+  end
+
+  # The row is written from #call, not from publish -- which is what makes it
+  # survive a test that stubs publish wholesale.
+  test "the run is recorded even when publishing is stubbed out" do
+    copy_fixture("a.mp3")
+
+    assert_difference -> { SyncRun.count }, 1 do
+      LibrarySync.stub(:publish, ->(status) { status }) do
+        LibrarySync.new(@temp_dir).call
+      end
+    end
+  end
+
   test "removes songs whose files were deleted from disk" do
     kept = copy_fixture("kept.mp3")
     removed = copy_fixture("removed.mp3")

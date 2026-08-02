@@ -18,14 +18,13 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** nothing — all twelve steps are done and every feature in `CLAUDE.md` is built.
-- **Last completed:** three backlog items — `LIKE` escaping across all text filters (which also
-  fixed a live 500 from typing `t` into the File path box), the path template as a `Setting`,
-  and the sync skip with its "Full rescan" escape hatch.
+- **Working on:** nothing — all twelve steps are done, and the backlog is now empty too.
+- **Last completed:** the four remaining backlog items, in six commits: a shared progress
+  component, file organization and bulk update moved onto it as background jobs, cross-page
+  selection with "select all matching", the mobile card layout, and `sync_runs` history.
 - **Blocked on:** nothing
 
-Four backlog items remain: the mobile card layout, cross-page selection, `sync_runs` auditing,
-and moving `FileOrganizer#apply!` into a job.
+Add a step for anything new; see **Backlog / deferred** for what has been done and why.
 
 Pick work from **Backlog / deferred** below, or add a step for anything new.
 
@@ -212,7 +211,7 @@ than a huge `NOT IN (...)`.
 | ActiveStorage stays disabled | Album art lives in the ID3 APIC frame. AS would add three tables, a second source of truth, and a "which wins when the file changes underneath us" problem. Uploads are handled in memory. |
 | `before_save` tag write, not `after_save`/`after_commit` | Rails only honours `throw :abort` in **before** callbacks — throwing it from `after_save` raises `UncaughtThrowError`. Writing first means a file we cannot write aborts the save and leaves the database untouched, which is the direction that matters: the database must never claim metadata the file does not have. (If the file write succeeds but the DB save then fails, the next sync re-reads the file and reconciles.) |
 | Dev/test stay on the `:async` job adapter | `config/cable.yml` uses the in-process `async` cable adapter in development; a separate solid_queue worker would broadcast progress into its own memory and the browser would never see it. There is also no dev `queue` database. Production already uses solid_queue + solid_cable. |
-| No `sync_runs` / `uploads` tables | Sync progress is transient: `Rails.cache` + a cable broadcast. Upload progress is entirely client-side. |
+| No `uploads` table; `sync_runs` is an audit trail, not a progress store | Live sync *progress* is still transient — `Rails.cache` + one cable broadcast per ~10 files — and nothing about that changed. `sync_runs` answers a different question (what has happened to this library over time) and is written exactly twice per run, at the start and at the end, so it never sits in the hot path. Upload progress remains entirely client-side. |
 | One progress region, and operations are mutually exclusive | A sync prunes song rows while an organize moves the files underneath them, so they must not overlap. One cache key and one bar rather than two stacked ones follows from that: `ProgressReporting.busy?` gates every enqueue, and the bar shows whichever operation is running. |
 | The selection lives in memory, never in storage | Nothing keeps a restored id set honest: a sync prunes rows, an organize moves files, a delete removes a song, and "1,204 selected" becomes a lie. A reload is a deliberate reset, and the one automatic trigger is the `turbo_stream.refresh` a finished operation broadcasts — which fires exactly when the library changed underneath it. |
 | Large selections send the filter, not the ids | `selection#openModal` puts ids in a GET query string, so a few hundred is the ceiling before a 414. "Select all N matching" sends `select_all=1` alongside the `q` params already on the wire and the server re-resolves. It also spans rows the browser has never rendered, which an id list cannot. |
@@ -238,7 +237,9 @@ test group. Coverage after step 4 is ~98%.
       `checkboxTargetConnected` as rows reconnect. Plus a "Select all N matching" mode that sends
       the filter rather than ids.
 
-- [ ] `sync_runs` table if sync history ever needs auditing — `LibrarySync::Status` is already the right shape.
+- [x] ~~`sync_runs` table if sync history ever needs auditing.~~ — done. `SyncRun` includes the same
+      `ProgressStatus` mixin as the live status, so a stored run renders through the same helpers.
+      Retention is capped at `SyncRun::KEEP`, enforced in `start!` before the insert.
 - [x] ~~Move `FileOrganizer#apply!` into a job~~ — done. `FileOrganization` wraps it the way
       `LibrarySync` wraps `LibraryScanner`, reporting through the shared progress component.
 - [x] ~~Persist the path template as a `Setting` record instead of `session`.~~ — done.
@@ -293,6 +294,20 @@ test group. Coverage after step 4 is ~98%.
   `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
 - Rendering a partial from a controller needs `render partial: "progress/update"`. Plain
   `render "progress/update"` looks for a *template* and raises `MissingTemplate`.
+- **An empty Array serializes to NULL.** `ActiveRecord::Type::Serialized#serialize` returns nil
+  when the value equals the coder's own default, so with `serialize type: Array` an empty array
+  can never satisfy a `null: false` column — `SyncRun.failures` is nullable for exactly that
+  reason, and NULL reads back as `[]`.
+- **Do not override `errors` on an Active Record model** — it is `ActiveModel::Errors` and
+  validations need it. `SyncRun` includes `ProgressStatus`, which asks about `errors`, so it
+  overrides only `errors?` and `errors_message` and leaves `errors` alone.
+- **`bin/rails db:migrate` only migrates development.** After changing a migration, the test
+  database still has the old schema until `bin/rails db:test:prepare` — worth remembering when a
+  `NOT NULL` violation persists after you thought you had fixed it.
+- `bin/rails runner -e test` writes to the *test* database and outside a transaction, so rows left
+  behind by manual probing survive into the suite and can fail order- or count-sensitive tests.
+- A `<summary>` is neither a link nor a button, so Capybara's `click_on` cannot find it. Use
+  `find("summary", text: …).click`.
 - **`Tempfile` unlinks its file from a GC finalizer.** Returning `file.path` and dropping the
   object lets the file vanish at an arbitrary later moment — which is what happened to bulk album
   art handed to a job. Only the system test caught it, because a real worker thread gives GC time

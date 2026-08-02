@@ -1,10 +1,13 @@
 class LibrarySync
   # A snapshot of an in-flight or finished sync.
   #
-  # Deliberately not an Active Record model: progress is transient, and keeping
-  # it in the cache means no table, no migration, and no rows to clean up. It
-  # is written on every broadcast and read on page load, so a browser refresh
-  # mid-sync still shows the bar.
+  # Deliberately not an Active Record model: *progress* is transient. It is
+  # rewritten on every broadcast and read on page load, so a browser refresh
+  # mid-sync still shows the bar, and the cache means no rows to clean up.
+  #
+  # The durable record of a run is SyncRun, which is a different question --
+  # what has happened to this library over time -- and is written once at the
+  # start of a run and once at the end, never in the hot path.
   Status = Data.define(:state, :current, :total, :filename, :errors, :finished_at, :skipped) do
     include ProgressStatus
 

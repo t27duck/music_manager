@@ -44,23 +44,33 @@ class LibrarySync
   end
 
   def call
-    started_at = Time.current
+    # The row *is* the start time, so there is no separate started_at local to
+    # drift from it. Written here rather than in #publish: publish fires once
+    # per ten files, and one row per run is the shape that matters.
+    @run = SyncRun.start!(forced: @force)
     paths = LibraryScanner.new(@root).mp3_paths
 
     publish(current: 0, total: paths.size, filename: nil)
     import_all(paths)
-    prune(started_at)
+    prune(@run.created_at)
 
-    publish(current: paths.size, total: paths.size, filename: nil, state: :completed)
+    finish(publish(current: paths.size, total: paths.size, filename: nil, state: :completed))
   rescue StandardError => e
     # The bar must not spin forever if something unexpected goes wrong.
     @errors << e.message
-    publish(current: 0, total: 0, filename: nil, state: :failed)
+    finish(publish(current: 0, total: 0, filename: nil, state: :failed))
     raise
   end
 
   private
     attr_reader :errors
+
+    # Closes the audit row. Guarded: if the scanner raised before the row was
+    # created there is nothing to close.
+    def finish(status)
+      @run&.finish!(status)
+      status
+    end
 
     def import_all(paths)
       total = paths.size

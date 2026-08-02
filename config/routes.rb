@@ -29,6 +29,10 @@ Rails.application.routes.draw do
   # progress_controller.js as a fallback for a broadcast that went missing.
   resource :progress, only: :show
 
+  # The audit trail of past syncs. Live progress is the #progress resource
+  # above; this is what happened, not what is happening.
+  resources :sync_runs, only: :index
+
   # Drag-and-drop upload page, and one POST per file.
   resource :upload, only: [ :show, :create ]
 

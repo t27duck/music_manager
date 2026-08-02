@@ -1,0 +1,46 @@
+<% content_for :title, "Sync history" %>
+
+<div class="mb-5">
+  <h1 class="text-2xl font-semibold tracking-tight">Sync history</h1>
+  <p class="mt-1 text-sm text-surface-400">
+    The last <%= number_with_delimiter(SyncRun::KEEP) %> library syncs. Older runs are discarded.
+  </p>
+</div>
+
+<% if @runs.any? %>
+  <div class="card overflow-hidden">
+    <div class="sm:overflow-x-auto">
+      <table class="block w-full text-left text-sm sm:table sm:min-w-[760px] sm:table-fixed"
+             aria-label="Sync runs">
+        <thead class="hidden border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase sm:table-header-group">
+          <tr>
+            <th scope="col" class="w-56 px-4 py-3 font-medium">Started</th>
+            <th scope="col" class="w-40 px-4 py-3 font-medium">Outcome</th>
+            <th scope="col" class="w-24 px-4 py-3 text-right font-medium">Files</th>
+            <th scope="col" class="w-28 px-4 py-3 text-right font-medium">Unchanged</th>
+            <th scope="col" class="w-24 px-4 py-3 text-right font-medium">Took</th>
+            <th scope="col" class="px-4 py-3 font-medium">Errors</th>
+          </tr>
+        </thead>
+
+        <tbody class="block divide-y divide-surface-800 sm:table-row-group">
+          <%= render partial: "sync_runs/run", collection: @runs %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <%= paginate @runs %>
+<% else %>
+  <div class="card flex flex-col items-center gap-3 px-6 py-16 text-center">
+    <span class="text-4xl text-surface-700" aria-hidden="true">&#8635;</span>
+
+    <h2 class="text-lg font-medium text-surface-200">No syncs yet</h2>
+
+    <p class="text-sm text-surface-400">
+      Run a sync from the library and it will be recorded here.
+    </p>
+
+    <%= link_to "Go to the library", root_path, class: "btn mt-1" %>
+  </div>
+<% end %>

@@ -85,6 +85,9 @@ CI pipeline runs: rubocop → bundler-audit → importmap audit → brakeman →
 - Database files stored in `storage/` directory
 - Background jobs run on the **`:async` adapter in development and test, on purpose**. `config/cable.yml` uses the in-process `async` cable adapter in development, so a separate SolidQueue worker process would broadcast progress into its own memory and the browser would never receive it. Production uses SolidQueue + SolidCable. Do not add a `jobs:` line to `Procfile.dev`.
 - `TODO.md` tracks implementation progress step by step; read it before starting work.
+- Timestamps are rendered with `ApplicationHelper#formatted_time`, which formats through
+  `en.time.formats.run` in `config/locales/en.yml` — never inline `strftime`, and absolute rather
+  than relative. `config.time_zone` is Eastern; change it in `config/application.rb`.
 - `Setting` (`app/models/setting.rb`) is a generic key/value table for app preferences that must
   outlive a browser session — `Setting[:name]` reads, `Setting[:name] = value` writes. There is no
   `User` model or authentication, so these are settings for the app, not for a person. Adding a
@@ -130,6 +133,9 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - Color-coded status text: blue (running), green (completed), red (failed)
 - Completed status auto-hides after 5 seconds
 - Sync button disabled while sync is running
+- Sync history at `/sync_runs`: one `SyncRun` row per run, written once at the start and once at
+  the end, capped at `SyncRun::KEEP` runs. It is an audit trail, not a progress store — live
+  progress is still the cache plus a broadcast
 - Re-syncing updates existing song metadata instead of skipping
 - Files whose modification time (to the second) and size are both unchanged are left unread, since
   parsing ID3 and hashing the cover is nearly all of a sync's cost. A "Full rescan" button beside

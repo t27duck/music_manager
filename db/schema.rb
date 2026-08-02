@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_02_182711) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_02_194151) do
   create_table "settings", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "key", null: false
@@ -45,5 +45,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_182711) do
     t.index ["last_seen_at"], name: "index_songs_on_last_seen_at"
     t.index ["title"], name: "index_songs_on_title"
     t.index ["year"], name: "index_songs_on_year"
+  end
+
+  create_table "sync_runs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "failures"
+    t.datetime "finished_at"
+    t.boolean "forced", default: false, null: false
+    t.integer "skipped", default: 0, null: false
+    t.string "state", null: false
+    t.integer "total", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_sync_runs_on_created_at"
   end
 end

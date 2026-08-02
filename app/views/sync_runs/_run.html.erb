@@ -1,0 +1,43 @@
+<%# Same reflow as the song list: a row from sm: up, a stacked block below. %>
+<tr id="<%= dom_id(run) %>" class="block space-y-1 p-3 sm:table-row sm:space-y-0 sm:p-0">
+  <td class="block text-surface-100 sm:table-cell sm:px-4 sm:py-2.5">
+    <%= formatted_time run.created_at %>
+  </td>
+
+  <td class="block sm:table-cell sm:px-4 sm:py-2.5">
+    <span class="font-medium <%= sync_run_color(run) %>"><%= sync_run_outcome(run) %></span>
+    <%# Its own line on purpose: alongside the outcome it wrapped anyway and
+        made the row taller than the others. %>
+    <% if run.forced? %>
+      <span class="block text-xs text-surface-500">Full rescan</span>
+    <% end %>
+  </td>
+
+  <td class="block text-xs text-surface-400 sm:table-cell sm:px-4 sm:py-2.5 sm:text-right sm:text-sm sm:tabular-nums">
+    <span class="sm:hidden">Files: </span><%= number_with_delimiter(run.total) %>
+  </td>
+
+  <td class="block text-xs text-surface-400 sm:table-cell sm:px-4 sm:py-2.5 sm:text-right sm:text-sm sm:tabular-nums">
+    <span class="sm:hidden">Unchanged: </span><%= number_with_delimiter(run.skipped) %>
+  </td>
+
+  <td class="block text-xs text-surface-400 sm:table-cell sm:px-4 sm:py-2.5 sm:text-right sm:text-sm sm:tabular-nums">
+    <span class="sm:hidden">Took: </span><%= run.duration ? formatted_duration(run.duration) : "—" %>
+  </td>
+
+  <td class="block text-xs sm:table-cell sm:px-4 sm:py-2.5 sm:text-sm">
+    <% if run.errors? %>
+      <details>
+        <summary class="cursor-pointer text-amber-400 select-none"><%= run.errors_message %></summary>
+
+        <ul class="mt-1 max-h-40 space-y-0.5 overflow-y-auto text-xs text-surface-400">
+          <% run.failures.each do |failure| %>
+            <li class="wrap-anywhere"><%= failure %></li>
+          <% end %>
+        </ul>
+      </details>
+    <% else %>
+      <span class="text-surface-600">—</span>
+    <% end %>
+  </td>
+</tr>

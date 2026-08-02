@@ -29,3 +29,10 @@
 
 en:
   hello: "Hello world"
+
+  time:
+    formats:
+      # Timestamps are formatted through here rather than with inline strftime,
+      # so there is one place to change them. Absolute, not relative: a "3 hours
+      # ago" goes stale in an open tab and needs JS to stop lying.
+      run: "%-d %b %Y at %-l:%M %p"
