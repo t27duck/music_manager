@@ -12,7 +12,12 @@ TailwindCSS v4, SQLite, and SolidQueue/SolidCache/SolidCable in production.
 
 - **Sync** — scans `LIBRARY_ROOT` for MP3s, reads their ID3 tags, and removes
   songs whose files are gone. Progress streams to the browser live, and one
-  unreadable file is reported rather than aborting the run.
+  unreadable file is reported rather than aborting the run. Files whose
+  timestamp and size are unchanged are left unread, which takes a repeat sync of
+  a ~4,900-song library from about 40 seconds to under one; **Full rescan**
+  re-reads everything regardless.
+- **Sync history** — every run is recorded: when it started, how long it took,
+  how many files it saw, how many it skipped, and anything it could not import.
 - **Browse** — sortable, paginated list with search-as-you-type across title,
   artist, album and genre, plus filters for individual fields, file path, and
   missing metadata.
@@ -24,8 +29,19 @@ TailwindCSS v4, SQLite, and SolidQueue/SolidCache/SolidCable in production.
   with per-song failures reported rather than silently swallowed.
 - **Organize** — re-file songs under a path template such as
   `<Artist>/<Album>/<Track:2> - <Title>`, previewed before anything moves.
+- **Select across pages** — a selection survives paging, filtering and sorting,
+  and **Select all N matching** widens it to everything the current filter
+  returns, not just the rows on screen.
 - **Upload** — drag in files or whole folders; they land in `_NEW/` keeping
   their structure, and are imported as they arrive.
+
+Bulk edits and file moves run in the background with a live progress bar, since
+each changed song means rewriting a whole file. Only one long-running operation
+runs at a time — a sync prunes rows while an organize moves the files under
+them, so they are never allowed to overlap.
+
+The layout is built for a desktop screen but collapses to one card per song on a
+phone, with no sideways scrolling.
 
 ## Requirements
 
@@ -56,6 +72,9 @@ bin/dev              # web + tailwind watcher, port 3000
 |---|---|---|
 | `LIBRARY_ROOT` | `./library` | Directory scanned for MP3 files. Uploads land in `_NEW/` inside it. |
 | `PORT` | `3000` | Development server port. |
+
+Timestamps render in the zone set by `config.time_zone` in `config/application.rb`,
+currently US Eastern. Change it there if you are somewhere else.
 
 The library directory is gitignored — it holds your music, not source.
 
@@ -103,7 +122,10 @@ docker run -d -p 80:80 \
 ```
 
 Background jobs run inside Puma when `SOLID_QUEUE_IN_PUMA` is set, or as a separate
-`bin/jobs` process.
+`bin/jobs` process. Either way the worker must share a filesystem with the web
+process: it reads the music at `LIBRARY_ROOT`, and album art for a bulk edit is
+handed over as a file under `tmp/`. Running workers on a separate host is not
+supported.
 
 ## Project layout notes
 
