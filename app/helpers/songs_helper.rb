@@ -7,6 +7,22 @@ module SongsHelper
     state.compact_blank
   end
 
+  # Whether the current request is acting on everything matching the filter
+  # rather than on a list of ids. Exposed to views so a modal can echo the same
+  # mode back in its own links and fields.
+  def select_all?
+    ActiveModel::Type::Boolean.new.cast(params[:select_all]).present?
+  end
+
+  # The selection as URL params, for links that must preserve it -- the organize
+  # preview reloads itself as the template is typed and has to keep pointing at
+  # the same songs.
+  def selection_params
+    return { select_all: "1" } if select_all?
+
+    { song_ids: @selected_songs.map(&:id) }
+  end
+
   # The same state as hidden inputs, for forms.
   def list_state_fields
     state = list_state_params

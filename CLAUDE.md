@@ -162,7 +162,14 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
   whole-file rewrite (~10ms each on a real library), so a large selection cannot be done in the
   request. Album art is spooled to a tempfile at enqueue time, since the bytes cannot ride in job
   arguments
-- Select all / deselect all functionality
+- Select all / deselect all on the current page, and a "Select all N matching" escalation that
+  sends the active filter instead of a list of ids so the server can resolve it — the only way to
+  act on more songs than a URL can carry
+- Selection spans pages, filters and sorts. It is held in memory outside the `songs` turbo frame,
+  so a full page reload clears it — deliberately, since the only thing that reloads on its own is
+  a finished sync or organize, which is exactly when the selection would have gone stale
+- One action may touch at most `SongListing::SELECTION_LIMIT` songs; over that it is refused, never
+  silently trimmed
 - Selection count indicator
 
 ### File Organization

@@ -36,4 +36,10 @@
       </li>
     <% end %>
   </ul>
+
+  <% if (remaining = total - moves.size).positive? %>
+    <p class="mt-2 text-xs text-surface-600">
+      …and <%= number_with_delimiter(remaining) %> more, moved the same way.
+    </p>
+  <% end %>
 <% end %>

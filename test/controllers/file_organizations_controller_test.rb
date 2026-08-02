@@ -3,6 +3,7 @@ require "test_helper"
 class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
   include LibraryTestHelper
   include ActiveJob::TestHelper
+  include ConstantStubbing
 
   setup do
     @song = create_test_song("loose/one.mp3", title: "Midnight Drive", artist: "Neon Fields",
@@ -115,6 +116,48 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=alert]", text: /already running/
   end
 
+  test "select_all resolves the filter rather than a list of ids" do
+    perform_enqueued_jobs do
+      post file_organizations_url, params: {
+        select_all: "1",
+        q: { title_contains: "Midnight" },
+        template: "<Artist>/<Title>"
+      }, as: :turbo_stream
+    end
+
+    assert_equal target("Neon Fields/Midnight Drive.mp3"), @song.reload.file_path
+    assert_equal File.join(@temp_dir, "loose/two.mp3"), @other.reload.file_path
+  end
+
+  test "new echoes the all-matching mode back into the form" do
+    get new_file_organization_url(select_all: "1", q: { title_contains: "Midnight" })
+
+    assert_response :success
+    assert_select "input[name=select_all][value='1']"
+    assert_select "input[name='song_ids[]']", count: 0
+  end
+
+  # The preview is a preview, not the whole library rendered one line at a time.
+  test "the preview summarises anything past the preview limit" do
+    stub_const(SongListing, :PREVIEW_LIMIT, 1) do
+      get new_file_organization_url(song_ids: [ @song.id, @other.id ])
+
+      assert_select "turbo-frame#file_organization_preview", text: /and 1 more/
+    end
+  end
+
+  test "a selection over the limit is refused rather than trimmed" do
+    stub_const(SongListing, :SELECTION_LIMIT, 1) do
+      post file_organizations_url, params: { select_all: "1", template: "<Artist>/<Title>" },
+        as: :turbo_stream
+
+      assert_response :unprocessable_entity
+      assert_select "[role=alert]", text: /Narrow your filters/
+    end
+
+    assert_equal File.join(@temp_dir, "loose/one.mp3"), @song.reload.file_path
+  end
+
   test "create refuses an invalid template" do
     original = @song.file_path
 
@@ -193,6 +236,6 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
     get songs_url
 
     assert_select "button[data-action='selection#organize']", text: "Organize files"
-    assert_select "[data-selection-organize-url-value]"
+    assert_select "[data-selection-target=state][data-organize-url]"
   end
 end

@@ -1,6 +1,11 @@
-<div data-controller="selection"
-     data-selection-url-value="<%= new_bulk_update_path(**list_state_params) %>"
-     data-selection-organize-url-value="<%= new_file_organization_path(**list_state_params) %>">
+<%# The modal URLs live here, inside the frame, rather than on the selection
+    controller outside it: they carry the current filter, so they have to be
+    re-rendered whenever the filter changes. Held on the controller they would
+    be stale the moment a search re-rendered the list beneath it. %>
+<div data-selection-target="state"
+     data-bulk-url="<%= new_bulk_update_path(**list_state_params) %>"
+     data-organize-url="<%= new_file_organization_path(**list_state_params) %>"
+     data-matching-count="<%= songs.total_count %>">
   <div class="mb-3 flex min-h-8 flex-wrap items-center justify-between gap-3">
     <%# Announced so a screen reader hears the result of a filter, which
         otherwise changes the table silently. %>
@@ -17,6 +22,17 @@
       <button type="button" class="btn" data-action="selection#organize">Organize files</button>
       <button type="button" class="btn" data-action="selection#clear">Clear</button>
     </div>
+  </div>
+
+  <%# Offered only once the whole page is ticked and there is more to widen to,
+      so touching the entire library always takes two deliberate clicks. %>
+  <div class="mb-3 rounded-md border border-accent-800 bg-surface-850 px-4 py-2 text-sm text-surface-300"
+       data-selection-target="banner" hidden>
+    All <%= number_with_delimiter(songs.size) %> songs on this page are selected.
+    <button type="button" class="font-medium text-accent-400 underline transition hover:text-accent-300"
+            data-action="selection#selectAllMatching">
+      Select all <%= number_with_delimiter(songs.total_count) %> matching
+    </button>
   </div>
 
   <% if songs.any? %>

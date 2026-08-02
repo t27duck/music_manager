@@ -1,0 +1,11 @@
+<%# Carries the selection into the form's POST.
+    In all-matching mode the ids are deliberately absent: there can be thousands
+    of them, and the filter that defines the set is already on the wire via
+    list_state_fields. The server re-resolves it. %>
+<% if select_all %>
+  <%= hidden_field_tag :select_all, "1", id: nil %>
+<% else %>
+  <% songs.each do |song| %>
+    <%= hidden_field_tag "song_ids[]", song.id, id: nil %>
+  <% end %>
+<% end %>

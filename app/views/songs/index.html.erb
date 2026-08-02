@@ -6,8 +6,14 @@
 
 <%= render "songs/search", query: @query %>
 
-<%# The count lives inside the frame so it can never disagree with the rows
-    currently rendered -- filtering and paging replace both together. %>
-<%= turbo_frame_tag "songs", data: { turbo_action: "advance" } do %>
-  <%= render "songs/list", songs: @songs, query: @query %>
-<% end %>
+<%# The selection controller wraps the frame rather than living inside it. Every
+    filter, sort and page change replaces the frame's contents, so a controller
+    inside it would be torn down and take the selection with it -- which is
+    exactly why selecting across pages used to be impossible. %>
+<div data-controller="selection">
+  <%# The count lives inside the frame so it can never disagree with the rows
+      currently rendered -- filtering and paging replace both together. %>
+  <%= turbo_frame_tag "songs", data: { turbo_action: "advance" } do %>
+    <%= render "songs/list", songs: @songs, query: @query %>
+  <% end %>
+</div>

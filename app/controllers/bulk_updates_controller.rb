@@ -4,9 +4,14 @@ class BulkUpdatesController < ApplicationController
   before_action :set_selected_songs
 
   def new
+    render :new, status: (@error ? :unprocessable_entity : :ok)
   end
 
   def create
+    if @error
+      return render :new, status: :unprocessable_entity
+    end
+
     if @selected_songs.empty? || !changes?
       @error = "Choose at least one change to apply."
       return render :new, status: :unprocessable_entity
@@ -32,7 +37,12 @@ class BulkUpdatesController < ApplicationController
 
   private
     def set_selected_songs
-      @selected_songs = Song.where(id: params[:song_ids]).ordered.to_a
+      if selection_too_large?
+        @error = selection_too_large_message
+        @selected_songs = []
+      else
+        @selected_songs = selected_songs
+      end
     end
 
     def bulk_params

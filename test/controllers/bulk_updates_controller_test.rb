@@ -3,6 +3,7 @@ require "test_helper"
 class BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
   include LibraryTestHelper
   include ActiveJob::TestHelper
+  include ConstantStubbing
 
   setup do
     @one = create_test_song("a.mp3", title: "One", artist: "Old Artist")
@@ -115,6 +116,66 @@ class BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "New Artist", @one.reload.artist
     assert_equal "1 song updated, 1 failed.", BulkEdit.status.summary
     assert_match(/Could not write tags/, BulkEdit.status.errors.first)
+  end
+
+  # Selecting everything matching sends the filter, not thousands of ids: the
+  # browser has never seen most of those rows, and they would not fit in a URL.
+  test "select_all resolves the filter rather than a list of ids" do
+    perform_enqueued_jobs do
+      post bulk_updates_url, params: {
+        select_all: "1",
+        q: { title_contains: "One" },
+        bulk_update: { genre: "Ambient" }
+      }, as: :turbo_stream
+    end
+
+    assert_equal "Ambient", @one.reload.genre
+    assert_nil @two.reload.genre
+    assert_nil @untouched.reload.genre
+  end
+
+  test "select_all with no filter selects the whole library" do
+    perform_enqueued_jobs do
+      post bulk_updates_url, params: { select_all: "1", bulk_update: { genre: "Ambient" } },
+        as: :turbo_stream
+    end
+
+    assert_equal [ "Ambient" ] * 3,
+      [ @one, @two, @untouched ].map { |song| song.reload.genre }
+  end
+
+  test "select_all ignores a filter key that is not allow-listed" do
+    perform_enqueued_jobs do
+      post bulk_updates_url, params: {
+        select_all: "1",
+        q: { nonsense_cont: "One" },
+        bulk_update: { genre: "Ambient" }
+      }, as: :turbo_stream
+    end
+
+    # The unknown key is dropped, so this matched everything rather than raising.
+    assert_equal "Ambient", @untouched.reload.genre
+  end
+
+  test "new echoes the all-matching mode back into the form" do
+    get new_bulk_update_url(select_all: "1", q: { title_contains: "One" })
+
+    assert_response :success
+    assert_select "input[name=select_all][value='1']"
+    assert_select "input[name='song_ids[]']", count: 0
+  end
+
+  # Refused, not silently truncated: doing part of what was asked is worse.
+  test "a selection over the limit is refused rather than trimmed" do
+    stub_const(SongListing, :SELECTION_LIMIT, 2) do
+      post bulk_updates_url, params: { select_all: "1", bulk_update: { genre: "Ambient" } },
+        as: :turbo_stream
+
+      assert_response :unprocessable_entity
+      assert_select "[role=alert]", text: /Narrow your filters/
+    end
+
+    assert_nil @one.reload.genre
   end
 
   test "create refuses a submission with no changes" do

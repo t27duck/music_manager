@@ -9,15 +9,12 @@
           data: {
             controller: "path-template",
             path_template_url_value: new_file_organization_path(
-              song_ids: @selected_songs.map(&:id), **list_state_params
+              **selection_params, **list_state_params
             )
           } do |form| %>
 
       <%= list_state_fields %>
-
-      <% @selected_songs.each do |song| %>
-        <%= hidden_field_tag "song_ids[]", song.id, id: nil %>
-      <% end %>
+      <%= render "songs/selection_fields", songs: @selected_songs, select_all: select_all? %>
 
       <% if @error.present? %>
         <p class="rounded-md border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-100" role="alert">
@@ -48,7 +45,8 @@
       </div>
 
       <%= turbo_frame_tag "file_organization_preview", data: { path_template_target: "frame" } do %>
-        <%= render "file_organizations/preview", template: @template, moves: @moves %>
+        <%= render "file_organizations/preview", template: @template, moves: @moves,
+              total: @selected_songs.size %>
       <% end %>
 
       <div class="flex justify-end gap-2 border-t border-surface-800 pt-4">

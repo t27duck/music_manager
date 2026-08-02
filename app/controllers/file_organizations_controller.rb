@@ -6,11 +6,18 @@ class FileOrganizationsController < ApplicationController
 
   # Also the preview: the template form re-renders this action into a frame as
   # the user types, so what they read is exactly what #create will do.
+  # Previewing every move in a selection of thousands would render the whole
+  # library one line at a time; the rest is summarised instead.
   def new
-    @moves = @organizer.preview(@selected_songs)
+    @moves = @organizer.preview(@selected_songs.first(SongListing::PREVIEW_LIMIT))
+    render :new, status: (@error ? :unprocessable_entity : :ok)
   end
 
   def create
+    if @error
+      return render :new, status: :unprocessable_entity
+    end
+
     if @selected_songs.empty?
       @error = "Select some songs to organize."
       return render :new, status: :unprocessable_entity
@@ -37,7 +44,12 @@ class FileOrganizationsController < ApplicationController
 
   private
     def set_selected_songs
-      @selected_songs = Song.where(id: params[:song_ids]).ordered.to_a
+      if selection_too_large?
+        @error = selection_too_large_message
+        @selected_songs = []
+      else
+        @selected_songs = selected_songs
+      end
     end
 
     # What the user is typing, else what they last applied, else the default.

@@ -214,6 +214,8 @@ than a huge `NOT IN (...)`.
 | Dev/test stay on the `:async` job adapter | `config/cable.yml` uses the in-process `async` cable adapter in development; a separate solid_queue worker would broadcast progress into its own memory and the browser would never see it. There is also no dev `queue` database. Production already uses solid_queue + solid_cable. |
 | No `sync_runs` / `uploads` tables | Sync progress is transient: `Rails.cache` + a cable broadcast. Upload progress is entirely client-side. |
 | One progress region, and operations are mutually exclusive | A sync prunes song rows while an organize moves the files underneath them, so they must not overlap. One cache key and one bar rather than two stacked ones follows from that: `ProgressReporting.busy?` gates every enqueue, and the bar shows whichever operation is running. |
+| The selection lives in memory, never in storage | Nothing keeps a restored id set honest: a sync prunes rows, an organize moves files, a delete removes a song, and "1,204 selected" becomes a lie. A reload is a deliberate reset, and the one automatic trigger is the `turbo_stream.refresh` a finished operation broadcasts — which fires exactly when the library changed underneath it. |
+| Large selections send the filter, not the ids | `selection#openModal` puts ids in a GET query string, so a few hundred is the ceiling before a 414. "Select all N matching" sends `select_all=1` alongside the `q` params already on the wire and the server re-resolves. It also spans rows the browser has never rendered, which an id list cannot. |
 | A cached progress status holds primitives only | The cache Marshals it. `FileOrganizer::Result` holds `Move`s holding live `Song` records — storing that would bloat the entry and hand back a stale record on read. Each operation converts its result into counts and strings before publishing. |
 | Turbo Streams for sync, raw cable JSON for upload | Sync state is server-side and its markup is non-trivial; upload state (file list, per-file XHR progress, counter, summary) is already owned by the browser. |
 | ID3 POROs live in `app/models` | Rails-omakase keeps POROs there; avoids a new autoload root. `Mp3File` is the only class that touches `Mp3Info`. |
@@ -230,8 +232,10 @@ test group. Coverage after step 4 is ~98%.
 
 - [ ] Mobile shows the song table in a sideways-scrolling wrapper. Fine for a desktop-focused app,
       but a card layout under `sm:` would be better if mobile use turns out to matter.
-- [ ] Selection is per-page and resets whenever the list re-renders. Selecting across pages would
-      need the ids held outside the frame.
+- [x] ~~Selection is per-page and resets whenever the list re-renders.~~ — done. The selection
+      controller wraps the `songs` frame instead of living inside it, and re-applies its ids via
+      `checkboxTargetConnected` as rows reconnect. Plus a "Select all N matching" mode that sends
+      the filter rather than ids.
 
 - [ ] `sync_runs` table if sync history ever needs auditing — `LibrarySync::Status` is already the right shape.
 - [x] ~~Move `FileOrganizer#apply!` into a job~~ — done. `FileOrganization` wraps it the way
@@ -288,6 +292,13 @@ test group. Coverage after step 4 is ~98%.
   `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
 - Rendering a partial from a controller needs `render partial: "progress/update"`. Plain
   `render "progress/update"` looks for a *template* and raises `MissingTemplate`.
+- **Anything inside the `songs` frame is destroyed on every filter, sort or page change.** State
+  that must outlive that belongs on an element wrapping the frame (see `songs/index.html.erb`).
+  The converse trap: URLs built from `list_state_params` must stay *inside* the frame, or they go
+  stale the moment a search re-renders the list — hence the `state` target in `songs/_list`.
+- `assert_text "x", "my message"` does **not** attach a message: Capybara reads the first argument
+  as a `type`, and raises `"x is not a valid type for a text query"`. Use
+  `assert page.has_text?("x"), "my message"`.
 - **An uploaded file is an IO, so reading it twice returns `""` the second time.** The bulk-update
   controller read `params[:album_art]` once to decide whether anything had changed and again to
   spool it, and the art was silently dropped. Memoize anything derived from an upload.

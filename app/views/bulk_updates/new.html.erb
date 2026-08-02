@@ -4,10 +4,7 @@
         file_field, and the art input below is a standalone file_field_tag. %>
     <%= form_with url: bulk_updates_path, method: :post, multipart: true, class: "space-y-4" do |form| %>
       <%= list_state_fields %>
-
-      <% @selected_songs.each do |song| %>
-        <%= hidden_field_tag "song_ids[]", song.id, id: nil %>
-      <% end %>
+      <%= render "songs/selection_fields", songs: @selected_songs, select_all: select_all? %>
 
       <% if @error.present? %>
         <p class="rounded-md border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-100" role="alert">
@@ -62,8 +59,12 @@
       </div>
 
       <div class="max-h-32 overflow-y-auto rounded-md border border-surface-800 bg-surface-950 px-3 py-2 text-xs text-surface-500">
-        <% @selected_songs.each do |song| %>
+        <% @selected_songs.first(SongListing::PREVIEW_LIMIT).each do |song| %>
           <p class="truncate"><%= song.title %> <span class="text-surface-600">— <%= song.relative_path %></span></p>
+        <% end %>
+
+        <% if (remaining = @selected_songs.size - SongListing::PREVIEW_LIMIT).positive? %>
+          <p class="pt-1 text-surface-600">…and <%= number_with_delimiter(remaining) %> more</p>
         <% end %>
       </div>
 
