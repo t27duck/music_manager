@@ -19,8 +19,13 @@ TailwindCSS v4, SQLite, and SolidQueue/SolidCache/SolidCable in production.
 - **Sync history** — every run is recorded: when it started, how long it took,
   how many files it saw, how many it skipped, and anything it could not import.
 - **Browse** — sortable, paginated list with search-as-you-type across title,
-  artist, album and genre, plus filters for individual fields, file path, and
-  missing metadata.
+  artist, album artist, album and genre, plus filters for individual fields,
+  file path, and missing metadata. Or browse by **artist** and **album**: album
+  identity comes from the ID3 album-artist frame, so a compilation stays one
+  album instead of splitting into one per guest performer.
+- **Play** — a bar pinned to the bottom of every page that keeps playing while
+  you filter, sort, page and navigate. One track at a time; the server serves
+  byte ranges, so the scrub bar really seeks.
 - **Edit** — a modal for the full record, or double-click any cell to edit it in
   place. Every change is written back into the file's ID3v1 and ID3v2 tags; if
   the file cannot be written, the database is not changed either.
@@ -75,6 +80,11 @@ bin/dev              # web + tailwind watcher, port 3000
 
 Timestamps render in the zone set by `config.time_zone` in `config/application.rb`,
 currently US Eastern. Change it there if you are somewhere else.
+
+Album and artist browsing reads the ID3 album-artist (TPE2) frame. If you are
+upgrading a library that predates it, the next sync re-reads every file once by
+itself — `LibrarySync::TAG_EPOCH` handles that, so there is nothing to run by
+hand.
 
 The library directory is gitignored — it holds your music, not source.
 

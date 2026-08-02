@@ -18,11 +18,17 @@ file is the **plan** (what order, what is done, what is known-broken).
 
 ## Current status
 
-- **Working on:** nothing — all twelve steps are done, and the backlog is now empty too.
-- **Last completed:** the four remaining backlog items, in six commits: a shared progress
-  component, file organization and bulk update moved onto it as background jobs, cross-page
-  selection with "select all matching", the mobile card layout, and `sync_runs` history.
+- **Working on:** nothing.
+- **Last completed:** album/artist browsing and audio playback, in five commits — `album_artist`
+  read from ID3 TPE2 (with `TAG_EPOCH` to backfill it automatically), the album and artist
+  screens, the byte-range audio endpoint, and the persistent player.
 - **Blocked on:** nothing
+
+Everything in `CLAUDE.md` is built and the original backlog is empty. Earlier ideas that were
+raised and *not* taken: a duplicate finder (the real library has 26 duplicate artist+title
+groups), a trash directory instead of permanent delete, and a scheduled sync via
+`config/recurring.yml`. A "missing album art" filter was considered and rejected — zero songs in
+the real library are missing art, so it would ship dead.
 
 Add a step for anything new; see **Backlog / deferred** for what has been done and why.
 
