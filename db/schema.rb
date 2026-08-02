@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_02_194151) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_02_203550) do
   create_table "settings", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "key", null: false
@@ -23,6 +23,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_194151) do
     t.string "album"
     t.string "album_art_checksum"
     t.string "album_art_content_type"
+    t.string "album_artist"
     t.string "artist"
     t.integer "bitrate"
     t.datetime "created_at", null: false
@@ -38,6 +39,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_02_194151) do
     t.datetime "updated_at", null: false
     t.integer "year"
     t.index ["album"], name: "index_songs_on_album"
+    t.index ["album_artist", "album", "disc_number", "track_number"], name: "index_songs_on_album_grouping"
     t.index ["artist", "album", "disc_number", "track_number"], name: "index_songs_on_album_ordering"
     t.index ["artist"], name: "index_songs_on_artist"
     t.index ["file_path"], name: "index_songs_on_file_path", unique: true

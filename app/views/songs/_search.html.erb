@@ -50,6 +50,11 @@
       </div>
 
       <div>
+        <%= form.label :album_artist_contains, "Album artist", class: "label" %>
+        <%= form.search_field :album_artist_contains, class: "input", autocomplete: "off" %>
+      </div>
+
+      <div>
         <%= form.label :album_contains, "Album", class: "label" %>
         <%= form.search_field :album_contains, class: "input", autocomplete: "off" %>
       </div>

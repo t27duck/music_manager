@@ -257,6 +257,14 @@ test group. Coverage after step 4 is ~98%.
 ## Known issues / gotchas
 
 - `library/` holds the user's real music (543 albums). Never write to it from tests; it is gitignored.
+- **The mtime/size skip cannot tell that what we *extract* from a file has changed** — only that
+  the file has not. Adding a newly-read tag therefore leaves it unread on every existing song.
+  `LibrarySync::TAG_EPOCH` is the escape: bump it and the next sync force-re-reads once, writes the
+  new epoch on success, and reverts to skipping. A failed run leaves the epoch behind and retries.
+- **TPE2 has no generic key in `Mp3Info::TAG_MAPPING_2_3`** (only title/artist/album/year/tracknum/
+  comments/genre_s do), so album artist is read and written straight to the frame, like TPOS. It
+  needs no three-place `clear_tag`: there is no ID3v1 album-artist field, and `ID3v2#to_bin` skips
+  nil values when it rebuilds the tag, so assigning nil drops the frame.
 - **The sync skip keys on whole-second mtime plus `file_size`, not an exact timestamp.** The column
   is microsecond precision and Active Record *floors* `File::Stat#mtime`'s nanoseconds into it, so
   an exact comparison can never match on a filesystem that reports them. The blind spot is a file

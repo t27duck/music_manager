@@ -125,7 +125,14 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 ### Scanning & Import
 
 - Scan library directory for MP3 files (background job with real-time progress)
-- Automatic metadata extraction from ID3 tags (title, artist, album, genre, year, track number, disc number)
+- Automatic metadata extraction from ID3 tags (title, artist, album artist, album, genre, year,
+  track number, disc number)
+- `album_artist` comes from the ID3 **TPE2** frame and falls back to `artist` when absent (about a
+  tenth of real files). It is what makes a compilation one album instead of one album per track
+  artist, and it is bulk-editable so a mis-tagged compilation can be collapsed in one pass
+- `LibrarySync::TAG_EPOCH` — bump it whenever a release starts reading a tag it did not read
+  before. The next sync force-re-reads every file once, then reverts to skipping. Without it the
+  mtime/size skip would leave the new tag unread on every existing song
 - Default to filename if no title tag found
 - Automatic sync: removes database entries when files are deleted from disk
 - Real-time sync progress via WebSocket (ActionCable)

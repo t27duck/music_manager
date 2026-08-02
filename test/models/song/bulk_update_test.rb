@@ -18,6 +18,20 @@ class Song::BulkUpdateTest < ActiveSupport::TestCase
     assert_equal [ "New Artist", "New Artist" ], [ @one.reload.artist, @two.reload.artist ]
   end
 
+  # The reason album_artist is a bulk field at all: it is how a compilation that
+  # was tagged with fifty different track artists gets collapsed into one album.
+  test "collapses a compilation onto one album artist" do
+    @one.update!(artist: "Rozen")
+    @two.update!(artist: "Bernardo Limon")
+
+    Song::BulkUpdate.new([ @one, @two ], attributes: { "album_artist" => "Various Artists" }).call
+
+    assert_equal [ "Various Artists" ] * 2,
+      [ @one.reload.album_artist, @two.reload.album_artist ]
+    assert_equal "Various Artists", tags_on_disk(@one.file_path)[:album_artist]
+    assert_equal "Rozen", @one.artist, "the track artist was overwritten"
+  end
+
   test "writes the change to every file" do
     Song::BulkUpdate.new([ @one, @two ], attributes: { "album" => "Shared Album" }).call
 

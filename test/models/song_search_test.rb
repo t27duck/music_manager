@@ -39,6 +39,20 @@ class SongSearchTest < ActiveSupport::TestCase
     assert_equal [ literal.id ], songs_in_temp_dir.title_contains("my_song").pluck(:id)
   end
 
+  test "album_artist_contains treats an underscore literally, not as a wildcard" do
+    literal = create_test_song("a.mp3", album_artist: "my_label")
+    create_test_song("b.mp3", album_artist: "myXlabel")
+
+    assert_equal [ literal.id ], songs_in_temp_dir.album_artist_contains("my_label").pluck(:id)
+  end
+
+  test "the global search looks through the album artist too" do
+    wanted = create_test_song("a.mp3", artist: "Rozen", album_artist: "Various Artists")
+    create_test_song("b.mp3", artist: "Someone", album_artist: "Someone")
+
+    assert_equal [ wanted.id ], songs_in_temp_dir.text_contains("Various").pluck(:id)
+  end
+
   test "text_contains treats an underscore literally, not as a wildcard" do
     literal = create_test_song("a.mp3", album: "my_album")
     create_test_song("b.mp3", album: "myXalbum")

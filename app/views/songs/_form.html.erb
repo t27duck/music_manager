@@ -30,6 +30,14 @@
     </div>
 
     <div>
+      <%# What the song is filed under. Left blank it follows the artist; set it
+          to one value across a compilation's tracks to keep them one album. %>
+      <%= form.label :album_artist, "Album artist", class: "label" %>
+      <%= form.text_field :album_artist, class: "input",
+            placeholder: form.object.artist.presence || "Same as artist" %>
+    </div>
+
+    <div>
       <%= form.label :album, class: "label" %>
       <%= form.text_field :album, class: "input" %>
     </div>

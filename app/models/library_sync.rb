@@ -12,6 +12,15 @@ class LibrarySync
   # collected and written in batches of this size instead.
   SKIP_STAMP_SLICE = 500
 
+  # Bump this whenever a release starts reading a tag it did not read before.
+  # The first sync afterwards re-reads every file regardless of timestamp and
+  # size, then reverts to skipping. The skip can only tell that a *file* has not
+  # changed -- not that what we extract from it has -- so without this, adding a
+  # tag would leave it unread on every existing song until someone happened to
+  # press Full rescan.
+  TAG_EPOCH = 1
+  TAG_EPOCH_KEY = :tag_epoch
+
   class << self
     # Marks a sync as starting and queues it. Returns false if any operation is
     # already running, so a double-clicked button cannot start two -- and an
@@ -37,7 +46,7 @@ class LibrarySync
   # within the same second, to the same byte length.
   def initialize(root = Configuration.library_root, force: false)
     @root = root.to_s
-    @force = force
+    @force = force || tags_outdated?
     @errors = []
     @skipped_ids = []
     @skipped_count = 0
@@ -54,6 +63,10 @@ class LibrarySync
     import_all(paths)
     prune(@run.created_at)
 
+    # Only after a clean run: a failed one leaves the epoch behind so the next
+    # sync tries the re-read again.
+    Setting[TAG_EPOCH_KEY] = TAG_EPOCH
+
     finish(publish(current: paths.size, total: paths.size, filename: nil, state: :completed))
   rescue StandardError => e
     # The bar must not spin forever if something unexpected goes wrong.
@@ -64,6 +77,11 @@ class LibrarySync
 
   private
     attr_reader :errors
+
+    # Whether this release reads a tag the stored songs were never scanned for.
+    def tags_outdated?
+      Setting[TAG_EPOCH_KEY].to_i < TAG_EPOCH
+    end
 
     # Closes the audit row. Guarded: if the scanner raised before the row was
     # created there is nothing to close.

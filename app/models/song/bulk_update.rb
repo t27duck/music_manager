@@ -7,7 +7,9 @@
 class Song::BulkUpdate
   # Only these are offered in bulk. Title is absent on purpose -- giving fifty
   # songs the same title is never what anyone means.
-  FIELDS = %w[ artist album genre year disc_number ].freeze
+  # Album artist is here because bulk editing is how a mis-tagged compilation
+  # gets fixed: select the album's songs and give them all one album artist.
+  FIELDS = %w[ artist album_artist album genre year disc_number ].freeze
 
   Result = Data.define(:updated, :failures) do
     def updated_count = updated.size

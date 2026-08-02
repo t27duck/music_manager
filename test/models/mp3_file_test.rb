@@ -30,17 +30,47 @@ class Mp3FileTest < ActiveSupport::TestCase
 
     Mp3File.new(path).write_attributes(
       title: "New Title", artist: "New Artist", album: "New Album",
+      album_artist: "New Album Artist",
       genre: "Jazz", year: 1999, track_number: 3, disc_number: 2
     )
     attributes = Mp3File.new(path).attributes
 
     assert_equal "New Title", attributes[:title]
     assert_equal "New Artist", attributes[:artist]
+    assert_equal "New Album Artist", attributes[:album_artist]
     assert_equal "New Album", attributes[:album]
     assert_equal "Jazz", attributes[:genre]
     assert_equal 1999, attributes[:year]
     assert_equal 3, attributes[:track_number]
     assert_equal 2, attributes[:disc_number]
+  end
+
+  # TPE2 has no generic key in ruby-mp3info's mapping, so it is written straight
+  # to the frame -- the same treatment TPOS gets.
+  test "reads the album artist from the TPE2 frame" do
+    path = copy_fixture("song.mp3")
+    Mp3Info.open(path) { |mp3| mp3.tag2["TPE2"] = "Various Artists" }
+
+    assert_equal "Various Artists", Mp3File.new(path).attributes[:album_artist]
+  end
+
+  test "a file with no TPE2 reads a nil album artist" do
+    path = copy_fixture("song.mp3")
+
+    assert_nil Mp3File.new(path).attributes[:album_artist]
+  end
+
+  # The frame has no ID3v1 counterpart, so unlike the generic keys a nil is
+  # enough -- but only because ID3v2#to_bin skips nil values when it rebuilds
+  # the tag. Assert against the file, since nothing else would catch a regression.
+  test "clearing the album artist deletes the TPE2 frame" do
+    path = copy_fixture("song.mp3")
+    Mp3File.new(path).write_attributes(album_artist: "Various Artists")
+
+    Mp3File.new(path).write_attributes(album_artist: nil)
+
+    Mp3Info.open(path) { |mp3| assert_nil mp3.tag2["TPE2"] }
+    assert_nil Mp3File.new(path).attributes[:album_artist]
   end
 
   test "writing tags preserves embedded album art" do

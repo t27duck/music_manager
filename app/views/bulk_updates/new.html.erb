@@ -24,6 +24,13 @@
           </div>
 
           <div>
+            <%# The fix for a compilation whose tracks were filed under fifty
+                different artists: give them all one album artist. %>
+            <%= bulk.label :album_artist, "Album artist", class: "label" %>
+            <%= bulk.text_field :album_artist, class: "input" %>
+          </div>
+
+          <div>
             <%= bulk.label :album, class: "label" %>
             <%= bulk.text_field :album, class: "input" %>
           </div>

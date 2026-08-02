@@ -3,7 +3,7 @@ class Song < ApplicationRecord
   TAG_ATTRIBUTES = Mp3File::TAG_ATTRIBUTES
 
   # Metadata fields the user can edit, in display order.
-  EDITABLE_FIELDS = %w[ title artist album genre year disc_number track_number ].freeze
+  EDITABLE_FIELDS = %w[ title artist album_artist album genre year disc_number track_number ].freeze
 
   # Fields the "missing metadata" filter can look for.
   MISSING_METADATA_FIELDS = %w[ artist album genre year ].freeze
@@ -11,12 +11,12 @@ class Song < ApplicationRecord
   # The scopes the search UI can drive. One list, so the Ransack allow-list, the
   # permitted params and the "are any filters active?" helpers cannot drift.
   FILTER_SCOPES = %w[
-    text_contains title_contains artist_contains album_contains genre_contains
+    text_contains title_contains artist_contains album_artist_contains album_contains genre_contains
     file_path_contains missing_metadata
   ].freeze
 
   # Columns the global search box looks through, in one OR'd LIKE.
-  TEXT_SEARCH_COLUMNS = %w[ title artist album genre ].freeze
+  TEXT_SEARCH_COLUMNS = %w[ title artist album_artist album genre ].freeze
 
   # SQLite ignores the backslashes sanitize_sql_like inserts unless the query
   # names the escape character, so every LIKE we build has to pass it through.
@@ -39,7 +39,13 @@ class Song < ApplicationRecord
   validates :file_path, presence: true, uniqueness: true
 
   # Store blank metadata as NULL so "missing metadata" filters are a plain IS NULL.
-  normalizes :title, :artist, :album, :genre, with: ->(value) { value&.strip.presence }
+  normalizes :title, :artist, :album_artist, :album, :genre, with: ->(value) { value&.strip.presence }
+
+  # About a tenth of real files carry no TPE2, so the track artist stands in --
+  # otherwise those songs would collect in one nameless album. It lives here
+  # rather than in Mp3File, which should stay a faithful reader of the file, so
+  # that every write path gets it: import, upload, the modal, inline and bulk.
+  before_validation :default_album_artist
 
   # Tags are written *before* the record is saved, so that a file we cannot
   # write aborts the save and leaves the database untouched. Rails only honours
@@ -79,6 +85,7 @@ class Song < ApplicationRecord
   scope :text_contains, ->(value) { contains(TEXT_SEARCH_COLUMNS, value) }
   scope :title_contains, ->(value) { contains(:title, value) }
   scope :artist_contains, ->(value) { contains(:artist, value) }
+  scope :album_artist_contains, ->(value) { contains(:album_artist, value) }
   scope :album_contains, ->(value) { contains(:album, value) }
   scope :genre_contains, ->(value) { contains(:genre, value) }
   scope :file_path_contains, ->(value) { contains(:file_path, value) }
@@ -167,6 +174,10 @@ class Song < ApplicationRecord
   end
 
   private
+    def default_album_artist
+      self.album_artist = artist if album_artist.blank?
+    end
+
     # The type is taken from the file's magic bytes, never from the upload's
     # declared content type or its extension -- both are trivially wrong. (The
     # cover.jpg test fixture is really a PNG, which is the case in point.)

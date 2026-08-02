@@ -10,10 +10,11 @@ class Mp3File
   class Error < StandardError; end
 
   # Song attributes written back into the file's tags.
-  TAG_ATTRIBUTES = %w[ title artist album genre year track_number disc_number ].freeze
+  TAG_ATTRIBUTES = %w[ title artist album_artist album genre year track_number disc_number ].freeze
 
   # ruby-mp3info's generic tag keys, which it mirrors into both ID3v1 and ID3v2.3
-  # when the file is closed. Disc number has no generic key -- see #write_attributes.
+  # when the file is closed. Disc number and album artist have no generic key --
+  # see #write_attributes.
   GENERIC_TAG_KEYS = {
     title: "title",
     artist: "artist",
@@ -39,6 +40,9 @@ class Mp3File
       {
         title: sanitize(mp3.tag.title),
         artist: sanitize(mp3.tag.artist),
+        # TPE2. The tag that says a compilation's fifty different track artists
+        # are one album; Song fills it in from the artist when it is missing.
+        album_artist: sanitize(mp3.tag2["TPE2"]),
         album: sanitize(mp3.tag.album),
         genre: sanitize(mp3.tag.genre_s),
         year: parse_year(mp3.tag.year),
@@ -52,9 +56,15 @@ class Mp3File
     end
   end
 
+  # Frames with no generic key in ruby-mp3info's mapping, written straight to
+  # ID3v2. Neither has an ID3v1 equivalent, so unlike #clear_tag's three-place
+  # delete, assigning nil is enough: ID3v2#to_bin rebuilds the tag from its hash
+  # and skips nil values, so the frame simply stops being written.
+  ID3V2_ONLY_FRAMES = { album_artist: "TPE2", disc_number: "TPOS" }.freeze
+
   # Writes the given Song attributes into the file's tags. ruby-mp3info mirrors
-  # the generic keys into ID3v1 and ID3v2.3 on close; disc number has no generic
-  # key, so it is written straight to the TPOS frame.
+  # the generic keys into ID3v1 and ID3v2.3 on close; the frames above have no
+  # generic key and are written directly.
   def write_attributes(attributes)
     attributes = attributes.symbolize_keys
 
@@ -69,8 +79,10 @@ class Mp3File
         end
       end
 
-      if attributes.key?(:disc_number)
-        mp3.tag2["TPOS"] = attributes[:disc_number].presence&.to_s
+      ID3V2_ONLY_FRAMES.each do |attribute, frame|
+        next unless attributes.key?(attribute)
+
+        mp3.tag2[frame] = attributes[attribute].presence&.to_s
       end
     end
   end

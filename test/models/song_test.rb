@@ -25,6 +25,36 @@ class SongTest < ActiveSupport::TestCase
     assert_nil song.album
   end
 
+  # About a tenth of real files carry no TPE2. Without a fallback those songs
+  # would collect in one nameless album.
+  test "the album artist falls back to the artist when the file has no TPE2" do
+    song = create_test_song("a.mp3", artist: "Neon Fields", album_artist: nil)
+
+    assert_equal "Neon Fields", song.album_artist
+  end
+
+  test "an explicit album artist is kept" do
+    song = create_test_song("a.mp3", artist: "Rozen", album_artist: "Various Artists")
+
+    assert_equal "Various Artists", song.album_artist
+  end
+
+  test "clearing the album artist falls back to the artist again" do
+    song = create_test_song("a.mp3", artist: "Neon Fields", album_artist: "Various Artists")
+
+    song.update!(album_artist: "")
+
+    assert_equal "Neon Fields", song.reload.album_artist
+  end
+
+  test "the album artist is written through to the file" do
+    song = create_test_song("a.mp3", artist: "Rozen")
+
+    song.update!(album_artist: "Various Artists")
+
+    assert_equal "Various Artists", tags_on_disk(song.file_path)[:album_artist]
+  end
+
   test "writes changed tags through to the file" do
     song = create_test_song("song.mp3")
 

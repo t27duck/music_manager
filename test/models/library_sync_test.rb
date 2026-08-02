@@ -118,6 +118,46 @@ class LibrarySyncTest < ActiveSupport::TestCase
     assert_predicate Song.find_by(file_path: path).file_modified_at, :present?
   end
 
+  # The skip can only tell that a file has not changed, not that what we extract
+  # from it has. Without the epoch, adding a tag would leave it unread on every
+  # existing song until someone happened to press Full rescan.
+  test "the first sync of a new tag epoch re-reads even unchanged files" do
+    path = copy_fixture("song.mp3")
+    LibrarySync.new(@temp_dir).call
+    assert_equal 0, LibrarySync.status.skipped
+
+    Setting[LibrarySync::TAG_EPOCH_KEY] = LibrarySync::TAG_EPOCH - 1
+    Mp3Info.open(path) { |mp3| mp3.tag2["TPE2"] = "Various Artists" }
+    File.utime(File.stat(path).mtime, File.stat(path).mtime, path)
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal 0, LibrarySync.status.skipped, "the epoch did not force a re-read"
+    assert_equal "Various Artists", Song.find_by(file_path: path).album_artist
+  end
+
+  test "a completed sync records the tag epoch so the next one skips again" do
+    copy_fixture("song.mp3")
+
+    LibrarySync.new(@temp_dir).call
+    assert_equal LibrarySync::TAG_EPOCH, Setting[LibrarySync::TAG_EPOCH_KEY].to_i
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal 1, LibrarySync.status.skipped
+  end
+
+  test "a failed sync leaves the epoch behind so the re-read is retried" do
+    copy_fixture("song.mp3")
+    Setting[LibrarySync::TAG_EPOCH_KEY] = LibrarySync::TAG_EPOCH - 1
+
+    SongImporter.stub(:call, ->(_) { raise "disk on fire" }) do
+      assert_raises(RuntimeError) { LibrarySync.new(@temp_dir).call }
+    end
+
+    assert_operator Setting[LibrarySync::TAG_EPOCH_KEY].to_i, :<, LibrarySync::TAG_EPOCH
+  end
+
   test "records one run per sync" do
     copy_fixture("a.mp3")
     copy_fixture("b.mp3")
