@@ -10,7 +10,7 @@ class SongSearchTest < ActiveSupport::TestCase
     assert_equal [ match.id ], songs_in_temp_dir.file_path_contains("wanted").pluck(:id)
   end
 
-  # The reason this scope exists rather than Ransack's built-in `cont`.
+  # The reason these are scopes rather than Ransack's built-in `cont`.
   test "file_path_contains treats an underscore literally, not as a wildcard" do
     literal = create_test_song("my_song.mp3")
     create_test_song("myXsong.mp3")
@@ -30,6 +30,48 @@ class SongSearchTest < ActiveSupport::TestCase
     create_test_song("b.mp3")
 
     assert_equal 2, songs_in_temp_dir.file_path_contains("").count
+  end
+
+  test "title_contains treats an underscore literally, not as a wildcard" do
+    literal = create_test_song("a.mp3", title: "my_song")
+    create_test_song("b.mp3", title: "myXsong")
+
+    assert_equal [ literal.id ], songs_in_temp_dir.title_contains("my_song").pluck(:id)
+  end
+
+  test "text_contains treats an underscore literally, not as a wildcard" do
+    literal = create_test_song("a.mp3", album: "my_album")
+    create_test_song("b.mp3", album: "myXalbum")
+
+    assert_equal [ literal.id ], songs_in_temp_dir.text_contains("my_album").pluck(:id)
+  end
+
+  # Ransack coerces a scope's argument through its TRUE_VALUES/FALSE_VALUES list
+  # unless the scope opts out. Before it did, "t" raised ArgumentError and "0"
+  # silently dropped the filter -- both reachable by typing one character into
+  # the search box.
+  test "a search for a single value Ransack would read as a boolean still filters" do
+    wanted = create_test_song("t.mp3", title: "t", artist: "t", album: "t", genre: "t")
+    create_test_song("zebra.mp3", title: "Zebra", artist: "Zebra", album: "Zebra", genre: "Zebra")
+
+    # file_path_contains is left out: every file is under a temp directory whose
+    # own path contains a "t", so "t" legitimately matches all of them. It gets
+    # its own case below.
+    (Song::FILTER_SCOPES - [ "missing_metadata", "file_path_contains" ]).each do |scope|
+      found = songs_in_temp_dir.ransack(scope => "t").result
+
+      assert_equal [ wanted.id ], found.pluck(:id), "#{scope} did not filter on \"t\""
+    end
+
+    # This used to raise ArgumentError before the scope opted out of coercion.
+    assert_equal 2, songs_in_temp_dir.ransack(file_path_contains: "t").result.count
+  end
+
+  test "a search for \"0\" filters rather than being read as false" do
+    wanted = create_test_song("a.mp3", artist: "0")
+    create_test_song("b.mp3", artist: "Someone")
+
+    assert_equal [ wanted.id ], songs_in_temp_dir.ransack(artist_contains: "0").result.pluck(:id)
   end
 
   test "missing_metadata finds songs with no artist" do
@@ -68,7 +110,7 @@ class SongSearchTest < ActiveSupport::TestCase
     create_test_song("e.mp3", title: "X", artist: "X", album: "X", genre: "X")
 
     found = songs_in_temp_dir
-      .ransack(title_or_artist_or_album_or_genre_cont: "Needle").result
+      .ransack(text_contains: "Needle").result
 
     assert_equal [ by_title, by_artist, by_album, by_genre ].map(&:id).sort, found.pluck(:id).sort
   end
@@ -76,7 +118,7 @@ class SongSearchTest < ActiveSupport::TestCase
   test "ransack search is case-insensitive" do
     create_test_song("a.mp3", title: "Midnight Drive")
 
-    found = songs_in_temp_dir.ransack(title_or_artist_or_album_or_genre_cont: "midnight").result
+    found = songs_in_temp_dir.ransack(text_contains: "midnight").result
 
     assert_equal 1, found.count
   end
@@ -94,7 +136,7 @@ class SongSearchTest < ActiveSupport::TestCase
     wanted = create_test_song("b.mp3", artist: "Alpha", genre: "Jazz")
     create_test_song("c.mp3", artist: "Beta", genre: "Jazz")
 
-    found = songs_in_temp_dir.ransack(artist_cont: "Alpha", genre_cont: "Jazz").result
+    found = songs_in_temp_dir.ransack(artist_contains: "Alpha", genre_contains: "Jazz").result
 
     assert_equal [ wanted.id ], found.pluck(:id)
   end

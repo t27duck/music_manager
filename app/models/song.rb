@@ -8,6 +8,20 @@ class Song < ApplicationRecord
   # Fields the "missing metadata" filter can look for.
   MISSING_METADATA_FIELDS = %w[ artist album genre year ].freeze
 
+  # The scopes the search UI can drive. One list, so the Ransack allow-list, the
+  # permitted params and the "are any filters active?" helpers cannot drift.
+  FILTER_SCOPES = %w[
+    text_contains title_contains artist_contains album_contains genre_contains
+    file_path_contains missing_metadata
+  ].freeze
+
+  # Columns the global search box looks through, in one OR'd LIKE.
+  TEXT_SEARCH_COLUMNS = %w[ title artist album genre ].freeze
+
+  # SQLite ignores the backslashes sanitize_sql_like inserts unless the query
+  # names the escape character, so every LIKE we build has to pass it through.
+  LIKE_ESCAPE = "\\".freeze
+
   # Album art is embedded in the file, so an oversized image bloats every copy
   # of that song forever. These are generous for cover art.
   ALBUM_ART_CONTENT_TYPES = %w[ image/jpeg image/png image/gif ].freeze
@@ -46,14 +60,28 @@ class Song < ApplicationRecord
     where("file_path LIKE ? ESCAPE ?", "#{sanitize_sql_like(root)}/%", "\\")
   }
 
-  # Searching file paths needs the same ESCAPE treatment, and for the same
-  # reason: paths are full of underscores, and Ransack's built-in `cont` would
-  # let every one of them match any character.
-  scope :file_path_contains, ->(value) {
-    next all if value.blank?
+  # Every text filter goes through here rather than through Ransack's built-in
+  # `cont`, which emits a bare LIKE: under SQLite that makes every underscore
+  # the user types a single-character wildcard. Ransack cannot be made to emit
+  # ESCAPE -- it calls the Arel predicate with exactly one argument, so the
+  # escape character can never reach Arel::Nodes::Matches -- so the filters are
+  # scopes instead.
+  #
+  # Columns come from the frozen constants in this class, never from params.
+  def self.contains(columns, value)
+    return all if value.blank?
 
-    where("file_path LIKE ? ESCAPE ?", "%#{sanitize_sql_like(value)}%", "\\")
-  }
+    sql = Array(columns).map { |column| "#{column} LIKE :pattern ESCAPE :escape" }.join(" OR ")
+
+    where(sql, pattern: "%#{sanitize_sql_like(value.to_s)}%", escape: LIKE_ESCAPE)
+  end
+
+  scope :text_contains, ->(value) { contains(TEXT_SEARCH_COLUMNS, value) }
+  scope :title_contains, ->(value) { contains(:title, value) }
+  scope :artist_contains, ->(value) { contains(:artist, value) }
+  scope :album_contains, ->(value) { contains(:album, value) }
+  scope :genre_contains, ->(value) { contains(:genre, value) }
+  scope :file_path_contains, ->(value) { contains(:file_path, value) }
 
   # Songs missing a given piece of metadata. Blanks are normalized to NULL on
   # write, but older rows are matched defensively too.
@@ -75,7 +103,16 @@ class Song < ApplicationRecord
   end
 
   def self.ransackable_scopes(_auth_object = nil)
-    %w[ file_path_contains missing_metadata ]
+    FILTER_SCOPES
+  end
+
+  # Ransack coerces a scope's argument through its TRUE_VALUES/FALSE_VALUES list
+  # unless the scope opts out, so searching for "t" would call the scope with
+  # `true` -- and, since Rails scopes report an arity of -1, with no argument at
+  # all, raising ArgumentError. "0" fared worse: it was treated as false and the
+  # filter silently did nothing. Every one of these takes a user-typed string.
+  def self.ransackable_scopes_skip_sanitize_args
+    FILTER_SCOPES
   end
 
   def self.ransackable_associations(_auth_object = nil)

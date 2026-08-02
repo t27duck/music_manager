@@ -14,7 +14,7 @@
 
   <div class="flex flex-wrap items-center gap-3">
     <div class="relative min-w-64 flex-1">
-      <%= form.search_field :title_or_artist_or_album_or_genre_cont,
+      <%= form.search_field :text_contains,
             placeholder: "Search title, artist, album or genre…",
             autocomplete: "off",
             class: "input pr-9",
@@ -23,7 +23,7 @@
       <button type="button"
               class="absolute inset-y-0 right-0 px-3 text-surface-500 transition hover:text-surface-200"
               aria-label="Clear search"
-              <%= "hidden" if query.title_or_artist_or_album_or_genre_cont.blank? %>
+              <%= "hidden" if query.text_contains.blank? %>
               data-auto-submit-target="clear"
               data-action="auto-submit#clearQuery">&times;</button>
     </div>
@@ -40,23 +40,23 @@
 
     <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div>
-        <%= form.label :title_cont, "Title", class: "label" %>
-        <%= form.search_field :title_cont, class: "input", autocomplete: "off" %>
+        <%= form.label :title_contains, "Title", class: "label" %>
+        <%= form.search_field :title_contains, class: "input", autocomplete: "off" %>
       </div>
 
       <div>
-        <%= form.label :artist_cont, "Artist", class: "label" %>
-        <%= form.search_field :artist_cont, class: "input", autocomplete: "off" %>
+        <%= form.label :artist_contains, "Artist", class: "label" %>
+        <%= form.search_field :artist_contains, class: "input", autocomplete: "off" %>
       </div>
 
       <div>
-        <%= form.label :album_cont, "Album", class: "label" %>
-        <%= form.search_field :album_cont, class: "input", autocomplete: "off" %>
+        <%= form.label :album_contains, "Album", class: "label" %>
+        <%= form.search_field :album_contains, class: "input", autocomplete: "off" %>
       </div>
 
       <div>
-        <%= form.label :genre_cont, "Genre", class: "label" %>
-        <%= form.search_field :genre_cont, class: "input", autocomplete: "off" %>
+        <%= form.label :genre_contains, "Genre", class: "label" %>
+        <%= form.search_field :genre_contains, class: "input", autocomplete: "off" %>
       </div>
 
       <div>

@@ -57,7 +57,7 @@ class BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     post bulk_updates_url, params: {
       song_ids: selected,
       bulk_update: { artist: "New Artist" },
-      q: { title_cont: "One" }
+      q: { title_contains: "One" }
     }, as: :turbo_stream
 
     assert_select "turbo-stream[target=songs] #songs_count", text: /1 song/

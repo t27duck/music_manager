@@ -185,7 +185,12 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 ### Advanced Filters
 
 - Individual filter fields for title, artist, album, genre, year, file path
-- File path filter properly escapes underscores (_) in the query while searching
+- Every text filter escapes underscores (`_`) and percent signs (`%`) in the query. They are
+  `Song` scopes built by `Song.contains` and listed in `Song::FILTER_SCOPES` — Ransack's built-in
+  `cont` cannot emit SQLite's required `ESCAPE` clause. Query params read `q[title_contains]`,
+  `q[text_contains]` (the global box), etc. Any new user-typed scope must also be added to
+  `Song.ransackable_scopes_skip_sanitize_args`, or Ransack coerces values like `t` and `0` into
+  booleans.
 - Combine multiple filters simultaneously
 - Sort by any column
 - Filter by missing metadata (songs without artist, album, genre, or year)

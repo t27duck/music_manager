@@ -26,15 +26,19 @@ module SongsHelper
 
   # Whether the user has narrowed the list at all. Sorting does not count: it
   # changes the order, not which songs are shown.
+  #
+  # Scopes are not Ransack conditions, so they have to be asked for by name.
+  # Both of these read the one list on Song, so a new filter cannot be added
+  # without the Reset link and the advanced panel noticing it.
   def filters_active?(query)
-    query.conditions.any? || query.missing_metadata.present? || query.file_path_contains.present?
+    query.conditions.any? || scope_filters_active?(query, Song::FILTER_SCOPES)
   end
 
   # Whether anything in the collapsible panel is set, which decides if it opens.
+  # Everything but the global search box lives in there.
   def advanced_filters_active?(query)
-    return true if query.missing_metadata.present? || query.file_path_contains.present?
-
-    [ query.title_cont, query.artist_cont, query.album_cont, query.genre_cont, query.year_eq ].any?(&:present?)
+    query.year_eq.present? ||
+      scope_filters_active?(query, Song::FILTER_SCOPES - [ "text_contains" ])
   end
 
   # 154 -> "2:34", 3725 -> "1:02:05". Blank durations render as a dash so the
@@ -73,4 +77,9 @@ module SongsHelper
 
     value.to_s
   end
+
+  private
+    def scope_filters_active?(query, scopes)
+      scopes.any? { |scope| query.public_send(scope).present? }
+    end
 end

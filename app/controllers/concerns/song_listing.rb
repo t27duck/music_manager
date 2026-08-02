@@ -9,11 +9,10 @@ module SongListing
   # Every search key the UI can produce. Ransack allow-lists attributes and
   # scopes of its own accord, but permitting explicitly here means an unknown
   # key is dropped before Ransack ever sees it.
-  SEARCH_KEYS = %i[
-    title_or_artist_or_album_or_genre_cont
-    title_cont artist_cont album_cont genre_cont year_eq
-    file_path_contains missing_metadata s
-  ].freeze
+  # The text filters are Song scopes rather than Ransack predicates, because
+  # only a scope can emit the ESCAPE that SQLite's LIKE needs. `year_eq` is a
+  # real Ransack condition and `s` is the sort.
+  SEARCH_KEYS = (Song::FILTER_SCOPES.map(&:to_sym) + %i[ year_eq s ]).freeze
 
   private
     def load_songs

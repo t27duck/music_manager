@@ -50,7 +50,7 @@ class SongsEditingTest < ActionDispatch::IntegrationTest
 
     patch song_url(other), params: {
       song: { title: "Renamed" },
-      q: { artist_cont: "Alpha" }
+      q: { artist_contains: "Alpha" }
     }, as: :turbo_stream
 
     # The re-rendered list is still filtered to Alpha, so the renamed Beta song
@@ -114,7 +114,7 @@ class SongsEditingTest < ActionDispatch::IntegrationTest
     create_test_song("a.mp3", title: "Keep", artist: "Alpha")
     doomed = create_test_song("b.mp3", title: "Doomed", artist: "Beta")
 
-    delete song_url(doomed), params: { q: { artist_cont: "Alpha" } }, as: :turbo_stream
+    delete song_url(doomed), params: { q: { artist_contains: "Alpha" } }, as: :turbo_stream
 
     assert_select "turbo-stream[target=songs] td", text: "Keep"
     assert_select "turbo-stream[target=songs] #songs_count", text: /1 song/
@@ -134,9 +134,9 @@ class SongsEditingTest < ActionDispatch::IntegrationTest
   test "the row links to the edit modal carrying the current filters" do
     create_test_song("a.mp3", artist: "Alpha")
 
-    get songs_url(q: { artist_cont: "Alpha" })
+    get songs_url(q: { artist_contains: "Alpha" })
 
     assert_select "td a[data-turbo-frame=modal]", text: "Edit"
-    assert_select "td a[href*='artist_cont']"
+    assert_select "td a[href*='artist_contains']"
   end
 end

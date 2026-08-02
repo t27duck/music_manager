@@ -89,7 +89,7 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
     post file_organizations_url, params: {
       song_ids: [ @song.id ],
       template: "<Artist>/<Title>",
-      q: { title_cont: "Midnight" }
+      q: { title_contains: "Midnight" }
     }, as: :turbo_stream
 
     assert_select "turbo-stream[target=songs] #songs_count", text: /1 song/

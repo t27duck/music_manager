@@ -230,9 +230,11 @@ test group. Coverage after step 4 is ~98%.
 - [ ] Move `FileOrganizer#apply!` into a job if selections grow large enough to time out a request.
 - [ ] Persist the path template as a `Setting` record instead of `session`.
 - [ ] Skip re-reading tags during sync when `file_modified_at` is unchanged (needs a "force rescan" escape hatch).
-- [ ] Ransack's built-in `cont` does not escape `_`/`%` for the title/artist/album/genre filters
-      either — only `file_path_contains` does, since that is what the spec calls out and where
-      underscores actually hurt. Fixing it generally needs a custom predicate that emits `ESCAPE`.
+- [x] ~~Ransack's built-in `cont` does not escape `_`/`%`~~ — done. Every text filter is now a
+      `Song.contains`-backed scope (`text_contains`, `title_contains`, …) listed once in
+      `Song::FILTER_SCOPES`. A custom Ransack predicate turned out to be impossible: Ransack
+      calls the Arel predicate with exactly one argument, so the escape character can never
+      reach `Arel::Nodes::Matches`. Fixing it also uncovered two live bugs — see below.
 
 ## Known issues / gotchas
 
@@ -243,7 +245,18 @@ test group. Coverage after step 4 is ~98%.
   Ruby 3.4+ frozen string literals.
 - **SQLite `LIKE` needs an explicit `ESCAPE`.** `sanitize_sql_like` inserts backslashes, but SQLite
   ignores them unless the query says `LIKE ? ESCAPE ?`. Without it every `_` is a wildcard. Encoded
-  once in `Song.in_library`; step 5's file-path filter must do the same.
+  once in `Song.contains`, which every text filter goes through, and once in `Song.in_library`.
+- **Ransack cannot emit `ESCAPE`.** `nodes/condition.rb` calls `attribute.public_send(arel_pred, values)`
+  with exactly one argument, so `Arel::Predications#matches(other, escape = nil, …)` always gets
+  `nil` and the visitor never appends the clause. `arel_predicate` may be a Proc, but its return
+  value is used as the *method name*, not as a node factory. `Ransack::Constants.escape_wildcards`
+  is also a no-op on SQLite. Hence scopes, not a custom predicate.
+- **Ransack coerces scope arguments into booleans unless the scope opts out.** `TRUE_VALUES` is
+  `[true, 1, '1', 't', 'T', 'true', 'TRUE']`, and Rails scopes report an arity of `-1`, so
+  searching for `t` called the scope with *no* argument and raised `ArgumentError` — a 500 from
+  typing one character. `0` was read as false and the filter silently vanished. Every scope in
+  `Song::FILTER_SCOPES` is listed in `ransackable_scopes_skip_sanitize_args` for this reason;
+  any new user-typed scope must be added there too.
 - **`Dir.glob` ignores `File::FNM_CASEFOLD`.** `Dir.glob("**/*.mp3", flags: File::FNM_CASEFOLD)`
   silently misses `.MP3`, in both the keyword and positional forms. `LibraryScanner` globs `**/*`
   and filters on `File.extname(...).downcase` instead.
