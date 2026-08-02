@@ -1,0 +1,13 @@
+<% content_for :title, @artist.display_name %>
+
+<div class="mb-5">
+  <h1 class="text-2xl font-semibold tracking-tight wrap-anywhere"><%= @artist.display_name %></h1>
+
+  <p class="mt-1 text-sm text-surface-500">
+    <%= pluralize @artist.albums_count, "album" %> &middot; <%= pluralize @artist.songs_count, "song" %>
+  </p>
+</div>
+
+<ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+  <%= render partial: "albums/album", collection: @albums %>
+</ul>

@@ -226,7 +226,10 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - `/albums` — a paginated cover grid of every `(album_artist, album)` group, with its own search
   across album and album artist. An album page lists its tracks, naming the track artist only where
   it differs from the album artist (which is what makes a compilation legible)
-- `Album` is a **PORO, not a table** (`app/models/album.rb`): the file on disk is the source of
+- `/artists` — the same grid over `album_artist`, leading to an artist page of their albums.
+  Grouping on `album_artist` rather than `artist` is what keeps a compilation one entry instead of
+  one per guest performer. The hierarchy is Artists → Albums → Songs
+- `Album` and `Artist` are **POROs, not tables** (`app/models/album.rb`): the file on disk is the source of
   truth, so a table would need syncing and pruning on every tag edit for no query benefit
 - Album URLs carry the grouping key itself, encoded by `LibraryKey` (JSON inside urlsafe Base64 —
   it round-trips `nil` and cannot be confused by a delimiter inside a name). A malformed key raises

@@ -47,6 +47,7 @@
         <div class="flex flex-1 items-center gap-1">
           <%= nav_link_to "Songs", root_path %>
           <%= nav_link_to "Albums", albums_path, active: controller_name == "albums" %>
+          <%= nav_link_to "Artists", artists_path, active: controller_name == "artists" %>
           <%= nav_link_to "Upload", upload_path %>
           <%= nav_link_to "Sync history", sync_runs_path %>
         </div>

@@ -90,6 +90,9 @@ class Album
 
   def to_param = LibraryKey.encode(artist, name)
 
+  # For linking through to the artist page without building a throwaway Artist.
+  def artist_param = LibraryKey.encode(artist)
+
   def display_name = name.presence || "Unknown album"
   def display_artist = artist.presence || "Unknown artist"
 

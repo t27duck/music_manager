@@ -1,0 +1,20 @@
+<li>
+  <%# _top, because this card lives inside the `artists` frame. %>
+  <%= link_to artist_path(artist), class: "group block space-y-2",
+        data: { turbo_frame: "_top" } do %>
+    <%= render "songs/album_arts/thumbnail",
+          song_id: artist.cover_song_id,
+          checksum: artist.cover_checksum,
+          alt: "Album art for #{artist.display_name}",
+          size: :medium %>
+
+    <div>
+      <p class="line-clamp-2 min-h-[2.625rem] text-sm font-medium text-surface-100 transition group-hover:text-accent-400">
+        <%= artist.display_name %>
+      </p>
+      <p class="text-xs text-surface-500">
+        <%= pluralize artist.albums_count, "album" %> &middot; <%= pluralize artist.songs_count, "song" %>
+      </p>
+    </div>
+  <% end %>
+</li>

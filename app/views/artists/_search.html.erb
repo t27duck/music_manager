@@ -1,0 +1,22 @@
+<%= form_with url: artists_path, method: :get, class: "mb-5",
+      data: {
+        controller: "auto-submit",
+        turbo_frame: "artists",
+        action: "input->auto-submit#search"
+      } do %>
+
+  <div class="relative min-w-64">
+    <%= search_field_tag :search, search,
+          placeholder: "Search artists…",
+          autocomplete: "off",
+          class: "input pr-9",
+          data: { auto_submit_target: "query" } %>
+
+    <button type="button"
+            class="absolute inset-y-0 right-0 px-3 text-surface-500 transition hover:text-surface-200"
+            aria-label="Clear search"
+            <%= "hidden" if search.blank? %>
+            data-auto-submit-target="clear"
+            data-action="auto-submit#clearQuery">&times;</button>
+  </div>
+<% end %>

@@ -82,7 +82,7 @@ class AccessibilityTest < ApplicationSystemTestCase
   end
 
   test "each page has exactly one level-one heading" do
-    [ root_path, upload_path, albums_path, sync_runs_path ].each do |path|
+    [ root_path, upload_path, albums_path, artists_path, sync_runs_path ].each do |path|
       visit path
       assert_selector "h1", count: 1
     end

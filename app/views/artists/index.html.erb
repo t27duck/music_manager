@@ -1,0 +1,11 @@
+<% content_for :title, "Artists" %>
+
+<div class="mb-5">
+  <h1 class="text-2xl font-semibold tracking-tight">Artists</h1>
+</div>
+
+<%= render "artists/search", search: @search %>
+
+<%= turbo_frame_tag "artists", data: { turbo_action: "advance" } do %>
+  <%= render "artists/list", artists: @artists, search: @search %>
+<% end %>

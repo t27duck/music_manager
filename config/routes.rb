@@ -17,6 +17,7 @@ Rails.application.routes.draw do
   # Albums and artists are GROUP BYs over songs, not tables -- see app/models/album.rb.
   # The :id is the grouping key itself, encoded; see app/models/library_key.rb.
   resources :albums, only: [ :index, :show ]
+  resources :artists, only: [ :index, :show ]
 
   # Applying one set of changes to a checkbox selection. #new is the modal.
   resources :bulk_updates, only: [ :new, :create ]
