@@ -1,22 +1,25 @@
-<%# Announced: the sync runs in the background and its progress is otherwise
-    only conveyed visually. %>
-<div id="sync_status"
+<%# The progress of whichever long-running operation is current. Announced: the
+    work runs in the background and is otherwise only conveyed visually.
+
+    The wrapper renders even when there is no status, so a broadcast always has
+    a target to replace. %>
+<div id="progress"
      aria-live="polite"
-     data-controller="sync-status"
-     data-sync-status-running-value="<%= status&.running? || false %>"
-     data-sync-status-url-value="<%= sync_path %>">
+     data-controller="progress"
+     data-progress-running-value="<%= status&.running? || false %>"
+     data-progress-url-value="<%= progress_path %>">
   <% if status.present? %>
     <div class="border-b border-surface-800 bg-surface-900"
          <%= "data-controller=auto-hide" if status.completed? %>
          data-auto-hide-delay-value="5000">
       <div class="container mx-auto px-5 py-3">
         <div class="flex items-baseline justify-between gap-4 text-sm">
-          <span class="font-medium <%= sync_status_color(status) %>">
-            <%= sync_status_message(status) %>
+          <span class="font-medium <%= progress_color(status) %>">
+            <%= status.message %>
           </span>
 
           <span class="shrink-0 tabular-nums text-surface-400" aria-hidden="true">
-            <%= status.to_progress %>
+            <%= status.counter %>
           </span>
         </div>
 
@@ -25,8 +28,8 @@
              aria-valuenow="<%= status.percent %>"
              aria-valuemin="0"
              aria-valuemax="100"
-             aria-label="Library sync progress">
-          <div class="h-full rounded-full transition-[width] duration-300 ease-out <%= sync_bar_color(status) %>"
+             aria-label="Progress">
+          <div class="h-full rounded-full transition-[width] duration-300 ease-out <%= progress_bar_color(status) %>"
                style="width: <%= status.percent %>%"></div>
         </div>
 
@@ -35,9 +38,7 @@
         <% end %>
 
         <% if status.errors? %>
-          <p class="mt-1.5 text-xs text-amber-400">
-            <%= pluralize(status.errors.size, "file") %> could not be imported
-          </p>
+          <p class="mt-1.5 text-xs text-amber-400"><%= status.errors_message %></p>
         <% end %>
       </div>
     </div>

@@ -1,14 +1,21 @@
-<%# Two sibling forms, not one: button_to renders its own <form>, and nesting
+<%# Both buttons are disabled while *anything* is running, not just a sync:
+    operations are mutually exclusive. The label only says "Syncing" when the
+    running operation is actually a sync.
+
+    Two sibling forms, not one: button_to renders its own <form>, and nesting
     them is invalid markup the browser silently discards. %>
+<% busy = status&.running? || false %>
+<% syncing = busy && status.is_a?(LibrarySync::Status) %>
+
 <span id="sync_button" class="flex items-center gap-2">
-  <%= button_to sync_path, class: "btn btn-primary", disabled: status&.running? do %>
+  <%= button_to sync_path, class: "btn btn-primary", disabled: busy do %>
     <span aria-hidden="true">&#8635;</span>
-    <%= status&.running? ? "Syncing…" : "Sync library" %>
+    <%= syncing ? "Syncing…" : "Sync library" %>
   <% end %>
 
   <%= button_to "Full rescan", sync_path,
         params: { force: "1" },
         class: "btn",
-        disabled: status&.running?,
+        disabled: busy,
         title: "Re-read tags for every file, even ones that look unchanged" %>
 </span>

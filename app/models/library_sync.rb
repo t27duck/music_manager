@@ -1,40 +1,21 @@
 # Imports every MP3 under the library root, updating songs that already exist
 # and removing the ones whose files have been deleted from disk.
 #
-# Progress is published two ways at once: written to the cache (so a page load
-# mid-sync renders the current state) and broadcast over Turbo Streams (so open
-# pages update live). Both go through #publish, so they can never disagree.
+# Progress reporting -- the cache write, the broadcast and the throttle -- comes
+# from ProgressReporting, which this shares with every other long-running
+# operation.
 class LibrarySync
-  # Versioned: Status is a Data object and the cache Marshals it, so a status
-  # written before a member was added cannot be loaded into the new shape.
-  # Bumping the key retires those entries instead of raising on them.
-  CACHE_KEY = "library_sync:status:v2".freeze
-  STREAM = "library_sync".freeze
-  STATUS_TTL = 1.hour
+  include ProgressReporting
 
   # Skipped files still have to be stamped as seen or #prune deletes them, but
   # doing that one row at a time is the very cost this feature removes. They are
   # collected and written in batches of this size instead.
   SKIP_STAMP_SLICE = 500
 
-  # Broadcasting on every file would flood the cable on a large library, so
-  # updates are throttled to at most one per BROADCAST_EVERY files and never
-  # more often than BROADCAST_INTERVAL apart. The first and last file always
-  # broadcast, so the bar starts and finishes cleanly.
-  BROADCAST_EVERY = 10
-  BROADCAST_INTERVAL = 0.1
-
   class << self
-    def status
-      Rails.cache.read(CACHE_KEY)
-    end
-
-    def running?
-      status&.running? || false
-    end
-
-    # Marks a sync as starting and queues it. Returns false if one is already
-    # running, so a double-clicked button cannot start two.
+    # Marks a sync as starting and queues it. Returns false if any operation is
+    # already running, so a double-clicked button cannot start two -- and an
+    # organize already in flight blocks a sync.
     #
     # The status is written here rather than in the job so the button disables
     # immediately, before a worker has picked the job up.
@@ -48,14 +29,6 @@ class LibrarySync
 
     def call(force: false)
       new(force: force).call
-    end
-
-    # Writes the status to the cache and broadcasts it to every open page.
-    def publish(status)
-      Rails.cache.write(CACHE_KEY, status, expires_in: STATUS_TTL)
-      Turbo::StreamsChannel.broadcast_render_to(STREAM,
-        partial: "syncs/update", locals: { status: status })
-      status
     end
   end
 
@@ -180,16 +153,8 @@ class LibrarySync
       Song.in_library(@root).where(last_seen_at: ...started_at).delete_all
     end
 
-    def broadcast?(current, total)
-      return true if current == 1 || current == total
-      return false unless (current % BROADCAST_EVERY).zero?
-
-      elapsed = @last_broadcast_at.nil? || (Process.clock_gettime(Process::CLOCK_MONOTONIC) - @last_broadcast_at) >= BROADCAST_INTERVAL
-      elapsed
-    end
-
     def publish(state: :running, **attributes)
-      @last_broadcast_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      record_broadcast
 
       self.class.publish(
         Status.new(

@@ -14,18 +14,16 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_includes toast_classes(:notice), "border-accent-700"
   end
 
-  test "sync_status_message reports how many files were left unread" do
-    assert_equal "Sync complete — 12 unchanged", sync_status_message(status(skipped: 12))
+  test "progress_color follows the state" do
+    assert_equal "text-red-400", progress_color(status(state: :failed))
+    assert_equal "text-emerald-400", progress_color(status(state: :completed))
+    assert_equal "text-accent-400", progress_color(status(state: :running))
   end
 
-  test "sync_status_message says nothing about skipping when nothing was skipped" do
-    assert_equal "Sync complete", sync_status_message(status(skipped: 0))
-  end
-
-  test "sync_status_message describes a run in progress" do
-    assert_equal "Scanning library…", sync_status_message(status(state: :running, total: 0))
-    assert_equal "Syncing library…", sync_status_message(status(state: :running, total: 9))
-    assert_equal "Sync failed", sync_status_message(status(state: :failed))
+  test "progress_bar_color follows the state" do
+    assert_equal "bg-red-500", progress_bar_color(status(state: :failed))
+    assert_equal "bg-emerald-500", progress_bar_color(status(state: :completed))
+    assert_equal "bg-accent-500", progress_bar_color(status(state: :running))
   end
 
   private

@@ -52,7 +52,7 @@ class AccessibilityTest < ApplicationSystemTestCase
     visit root_path
 
     assert_selector "#songs_count[aria-live=polite]"
-    assert_selector "#sync_status[aria-live=polite]"
+    assert_selector "#progress[aria-live=polite]"
     assert_selector "#toasts[aria-live=polite]"
   end
 

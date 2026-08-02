@@ -28,8 +28,9 @@
   </head>
 
   <body class="min-h-screen bg-surface-950 font-sans text-surface-100 antialiased">
-    <%# Live library sync progress; see app/models/library_sync.rb. %>
-    <%= turbo_stream_from LibrarySync::STREAM %>
+    <%# Live progress for whatever long-running operation is current; see
+        app/models/concerns/progress_reporting.rb. %>
+    <%= turbo_stream_from ProgressReporting::STREAM %>
 
     <a href="#main"
        class="sr-only rounded-md bg-accent-600 px-4 py-2 font-medium text-white focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50">
@@ -48,11 +49,11 @@
           <%= nav_link_to "Upload", upload_path %>
         </div>
 
-        <%= render "syncs/sync_button", status: LibrarySync.status %>
+        <%= render "syncs/sync_button", status: ProgressReporting.current %>
       </nav>
     </header>
 
-    <%= render "syncs/status", status: LibrarySync.status %>
+    <%= render "progress/bar", status: ProgressReporting.current %>
 
     <main id="main" class="container mx-auto px-5 py-8">
       <%= yield %>

@@ -17,7 +17,7 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
 
     assert_predicate LibrarySync, :running?
     assert_select "turbo-stream[target=sync_button]"
-    assert_select "turbo-stream[target=sync_status]"
+    assert_select "turbo-stream[target=progress]"
   end
 
   test "create enqueues a forced sync when the rescan button is used" do
@@ -52,21 +52,6 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
   end
 
-  test "show reports the current status" do
-    LibrarySync.publish(LibrarySync::Status.starting)
-
-    get sync_url, as: :turbo_stream
-
-    assert_response :success
-    assert_select "turbo-stream[target=sync_status]"
-  end
-
-  test "show works when no sync has ever run" do
-    get sync_url, as: :turbo_stream
-
-    assert_response :success
-  end
-
   test "the sync button renders in the layout" do
     get root_url
 
@@ -97,15 +82,15 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
 
     get root_url
 
-    assert_select "#sync_status [role=progressbar][aria-valuenow=30]"
-    assert_select "#sync_status", text: /3\/10/
-    assert_select "#sync_status", text: /track\.mp3/
+    assert_select "#progress [role=progressbar][aria-valuenow=30]"
+    assert_select "#progress", text: /3\/10/
+    assert_select "#progress", text: /track\.mp3/
   end
 
   test "the progress bar is absent when no sync has run" do
     get root_url
 
-    assert_select "#sync_status", text: ""
+    assert_select "#progress", text: ""
   end
 
   test "a completed sync auto-hides" do
@@ -116,8 +101,8 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
 
     get root_url
 
-    assert_select "#sync_status [data-controller=auto-hide]"
-    assert_select "#sync_status", text: /Sync complete/
+    assert_select "#progress [data-controller=auto-hide]"
+    assert_select "#progress", text: /Sync complete/
   end
 
   test "a failed sync is reported in red" do
@@ -128,7 +113,7 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
 
     get root_url
 
-    assert_select "#sync_status .text-red-400", text: /Sync failed/
+    assert_select "#progress .text-red-400", text: /Sync failed/
   end
 
   test "the page subscribes to the sync stream" do

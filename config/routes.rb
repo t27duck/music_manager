@@ -21,8 +21,13 @@ Rails.application.routes.draw do
   # as the template is edited. #create performs the moves.
   resources :file_organizations, only: [ :new, :create ]
 
-  # Library scan. #create enqueues the job, #show reports current progress.
-  resource :sync, only: [ :show, :create ]
+  # Library scan. Progress is reported by the shared #progress resource below,
+  # not here -- the bar shows whichever operation is running, not just this one.
+  resource :sync, only: :create
+
+  # The progress of whatever long-running operation is current. Polled by
+  # progress_controller.js as a fallback for a broadcast that went missing.
+  resource :progress, only: :show
 
   # Drag-and-drop upload page, and one POST per file.
   resource :upload, only: [ :show, :create ]

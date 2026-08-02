@@ -48,12 +48,29 @@ class LibrarySync::StatusTest < ActiveSupport::TestCase
   end
 
   test "formats a stable progress counter" do
-    assert_equal "7/40", status(current: 7, total: 40).to_progress
+    assert_equal "7/40", status(current: 7, total: 40).counter
   end
 
   test "reports whether any file failed" do
     assert_not_predicate status(errors: []), :errors?
     assert_predicate status(errors: [ "bad.mp3: broken" ]), :errors?
+  end
+
+  # The message lives on the Status rather than in a helper: the progress bar is
+  # shared with operations that have no notion of a "skipped" file.
+  test "message reports how many files were left unread" do
+    assert_equal "Sync complete — 12 unchanged",
+      status(state: :completed, skipped: 12).message
+  end
+
+  test "message says nothing about skipping when nothing was skipped" do
+    assert_equal "Sync complete", status(state: :completed, skipped: 0).message
+  end
+
+  test "message describes a run in progress" do
+    assert_equal "Scanning library…", status(state: :running, total: 0).message
+    assert_equal "Syncing library…", status(state: :running, total: 9).message
+    assert_equal "Sync failed", status(state: :failed).message
   end
 
   test "survives a round trip through the cache" do
