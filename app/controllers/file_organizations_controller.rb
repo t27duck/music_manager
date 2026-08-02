@@ -22,7 +22,11 @@ class FileOrganizationsController < ApplicationController
     end
 
     @result = @organizer.apply!(@selected_songs)
-    session[:path_template] = @template.to_s
+
+    # Remembered only once the moves have actually been made, and outside the
+    # transaction that made them: a template that failed to save is a better
+    # outcome than one remembered for moves that never happened.
+    Setting[:path_template] = @template.to_s
     load_songs
 
     render :create
@@ -33,8 +37,9 @@ class FileOrganizationsController < ApplicationController
       @selected_songs = Song.where(id: params[:song_ids]).ordered.to_a
     end
 
+    # What the user is typing, else what they last applied, else the default.
     def set_template
-      @template = PathTemplate.new(params[:template].presence || session[:path_template] || PathTemplate::DEFAULT)
+      @template = PathTemplate.new(params[:template].presence || Setting[:path_template] || PathTemplate::DEFAULT)
       @organizer = FileOrganizer.new(@template)
       @moves = []
     end

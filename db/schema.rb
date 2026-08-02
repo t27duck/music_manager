@@ -10,7 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_01_211430) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_02_182711) do
+  create_table "settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.datetime "updated_at", null: false
+    t.string "value"
+    t.index ["key"], name: "index_settings_on_key", unique: true
+  end
+
   create_table "songs", force: :cascade do |t|
     t.string "album"
     t.string "album_art_checksum"

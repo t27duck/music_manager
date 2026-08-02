@@ -79,6 +79,10 @@ CI pipeline runs: rubocop → bundler-audit → importmap audit → brakeman →
 - Database files stored in `storage/` directory
 - Background jobs run on the **`:async` adapter in development and test, on purpose**. `config/cable.yml` uses the in-process `async` cable adapter in development, so a separate SolidQueue worker process would broadcast progress into its own memory and the browser would never receive it. Production uses SolidQueue + SolidCable. Do not add a `jobs:` line to `Procfile.dev`.
 - `TODO.md` tracks implementation progress step by step; read it before starting work.
+- `Setting` (`app/models/setting.rb`) is a generic key/value table for app preferences that must
+  outlive a browser session — `Setting[:name]` reads, `Setting[:name] = value` writes. There is no
+  `User` model or authentication, so these are settings for the app, not for a person. Adding a
+  preference needs no migration.
 
 ## Instructions
 
@@ -154,6 +158,8 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - Preview changes before applying
 - Automatic directory creation
 - Filename sanitization (removes illegal characters)
+- The last applied template is remembered in a `Setting` record, so it survives a cleared
+  cookie and is shared across browsers
 
 ### Upload
 

@@ -130,6 +130,26 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
     get new_file_organization_url(song_ids: [ @other.id ])
 
     assert_select "input[name=template][value='<Genre>/<Title>']"
+    assert_equal "<Genre>/<Title>", Setting[:path_template]
+  end
+
+  # The reason the template is a Setting rather than session state: it is an app
+  # preference, not something about this browser. reset! throws the session away.
+  test "create remembers the template even for a new session" do
+    post file_organizations_url, params: { song_ids: [ @song.id ], template: "<Genre>/<Title>" },
+      as: :turbo_stream
+
+    reset!
+
+    get new_file_organization_url(song_ids: [ @other.id ])
+
+    assert_select "input[name=template][value='<Genre>/<Title>']"
+  end
+
+  test "new falls back to the default template when nothing has been applied yet" do
+    get new_file_organization_url(song_ids: [ @song.id ])
+
+    assert_select "input[name=template][value='#{PathTemplate::DEFAULT}']"
   end
 
   test "create reports failures alongside successes" do

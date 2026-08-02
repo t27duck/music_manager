@@ -228,7 +228,9 @@ test group. Coverage after step 4 is ~98%.
 
 - [ ] `sync_runs` table if sync history ever needs auditing — `LibrarySync::Status` is already the right shape.
 - [ ] Move `FileOrganizer#apply!` into a job if selections grow large enough to time out a request.
-- [ ] Persist the path template as a `Setting` record instead of `session`.
+- [x] ~~Persist the path template as a `Setting` record instead of `session`.~~ — done.
+      `Setting` is a generic key/value table with `Setting[:key]` / `Setting[:key] =` accessors,
+      so the next preference needs no migration.
 - [ ] Skip re-reading tags during sync when `file_modified_at` is unchanged (needs a "force rescan" escape hatch).
 - [x] ~~Ransack's built-in `cont` does not escape `_`/`%`~~ — done. Every text filter is now a
       `Song.contains`-backed scope (`text_contains`, `title_contains`, …) listed once in
