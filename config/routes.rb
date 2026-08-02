@@ -11,6 +11,12 @@ Rails.application.routes.draw do
 
       # Embedded cover art. #show serves the image bytes themselves.
       resource :album_art, only: [ :show, :edit, :update, :destroy ]
+
+      # The audio itself, served with byte ranges so the browser can seek. Keyed
+      # on the song id rather than the path, so playback survives a file move.
+      # The controller is named explicitly because Rails would otherwise look
+      # for "AudiosController" -- audio is uncountable.
+      resource :audio, only: :show, controller: :audio
     end
   end
 

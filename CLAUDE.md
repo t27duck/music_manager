@@ -221,6 +221,12 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 
 - Delete song from library and file permanently from disk
 
+### Playback
+
+- `GET /songs/:song_id/audio` serves the MP3 with real byte-range support, so the browser can seek.
+  It delegates to `Rack::Files#serving` — `send_file`/`send_data` ignore `Range` entirely. Keyed on
+  the song id, not the path, so a link survives a file organize
+
 ### Browsing
 
 - `/albums` — a paginated cover grid of every `(album_artist, album)` group, with its own search

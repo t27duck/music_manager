@@ -261,6 +261,17 @@ test group. Coverage after step 4 is ~98%.
   the file has not. Adding a newly-read tag therefore leaves it unread on every existing song.
   `LibrarySync::TAG_EPOCH` is the escape: bump it and the next sync force-re-reads once, writes the
   new epoch on success, and reverts to skipping. A failed run leaves the epoch behind and retries.
+- **`send_file` and `send_data` do not implement HTTP Range.** actionpack's `data_streaming.rb`
+  never looks at `HTTP_RANGE` and hard-codes the status, so an `<audio>` served by either plays
+  from the start but can never seek. `Rack::Files#serving` does it properly — 206, `Content-Range`,
+  416, 304, multipart byteranges — and is what `Songs::AudioController` delegates to. Note it does
+  **no** root containment check, so the path must come from a record, never from params.
+- **`Rack::Files` sets `x-cascade: pass` on the responses it treats as failures, including a
+  correct 416.** That header means "I declined, try the next route", so copying it onto a Rails
+  response makes routing fall past the action and raise `RoutingError` — an unsatisfiable range
+  came back as a 404. Strip it before copying headers through.
+- Rails pluralizes `resource :audio` to `AudiosController`. The route names its controller
+  explicitly rather than teaching the inflector that audio is uncountable.
 - **A link inside a turbo frame navigates *within* that frame.** An album card in the `albums`
   frame loaded the album page into the grid until it got `data: { turbo_frame: "_top" }`. Any link
   inside a frame that should replace the page needs it.
