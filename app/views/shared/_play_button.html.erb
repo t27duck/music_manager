@@ -1,0 +1,20 @@
+<%# Overlaid on the album art rather than given a column of its own: the song
+    row's mobile card is a four-column grid with nothing to spare, and the art
+    is already a comfortable tap target.
+
+    Always visible, only subdued -- a hover-only control is invisible both to a
+    touch screen and to Capybara. The label is set here for the server-rendered
+    case and kept in step by the controller. %>
+<button type="button"
+        class="absolute inset-0 flex items-center justify-center rounded bg-black/40 text-white opacity-70 transition hover:bg-black/60 hover:opacity-100 focus-visible:opacity-100"
+        aria-label="Play <%= song.title %>"
+        data-controller="play-button"
+        data-action="click->play-button#play player:changed@window->play-button#sync"
+        data-play-button-song-id-value="<%= song.id %>"
+        data-play-button-url-value="<%= song_audio_path(song) %>"
+        data-play-button-title-value="<%= song.title %>"
+        data-play-button-artist-value="<%= song.artist %>"
+        data-play-button-art-value="<%= song.album_art? ? song_album_art_path(song, v: song.album_art_checksum) : "" %>"
+        data-play-button-duration-value="<%= song.duration %>">
+  <span aria-hidden="true" class="text-sm">&#9654;</span>
+</button>

@@ -226,6 +226,17 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - `GET /songs/:song_id/audio` serves the MP3 with real byte-range support, so the browser can seek.
   It delegates to `Rack::Files#serving` — `send_file`/`send_data` ignore `Range` entirely. Keyed on
   the song id, not the path, so a link survives a file organize
+- A playback bar pinned to the bottom of every page, **one track at a time** (no queue — nothing
+  auto-advances). Play buttons overlay the album art on song rows and sit in the track-number cell
+  on album pages
+- It lives in the layout under `data-turbo-permanent`, so Turbo *moves* the node into each new page
+  and playback survives filtering, sorting, paging and navigation. **The Stimulus controller does
+  not survive** — the move is a real DOM mutation, so it disconnects and reconnects on every visit.
+  All state therefore lives in the DOM, `connect()` only reads, and the media events are bound with
+  `data-action` on the `<audio>` element so Stimulus unbinds them itself
+- Play buttons render inside the songs frame, outside the player's element, so they dispatch
+  `player:play` on `window` rather than calling it directly, and re-read the player's state on
+  `connect()` the way `selection_controller` re-reads its checkboxes
 
 ### Browsing
 

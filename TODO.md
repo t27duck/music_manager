@@ -261,6 +261,19 @@ test group. Coverage after step 4 is ~98%.
   the file has not. Adding a newly-read tag therefore leaves it unread on every existing song.
   `LibrarySync::TAG_EPOCH` is the escape: bump it and the next sync force-re-reads once, writes the
   new epoch on success, and reverts to skipping. A failed run leaves the epoch behind and retries.
+- **`offsetParent` is null for every `position: fixed` element**, so the accessibility audit's old
+  `offsetParent !== null` visibility filter silently skipped the whole playback bar and passed
+  without ever looking at it. It uses `checkVisibility()` now.
+- **`alt=""` is a deliberate "this image is decorative", not a missing alt.** The audit checks for
+  the *attribute*, so the player's cover — whose title and artist are read out right beside it —
+  can opt out without weakening the check on album art that does need a name.
+- **`data-turbo-permanent` preserves the DOM node but not the Stimulus controller.** The move into
+  the new page is a real childList mutation, so `connect()`/`disconnect()` fire on every Drive
+  visit and every `turbo_stream.refresh`. Keep such state in the DOM, make `connect()` read-only,
+  and bind listeners with `data-action` rather than adding them in `connect()`. The element also
+  needs an id, and the destination page must render one too — hence the layout.
+- **Never set `audio.src = ""` to stop playback** — an empty src makes the browser re-request the
+  current page URL as media. Use `removeAttribute("src")` then `load()`.
 - **`send_file` and `send_data` do not implement HTTP Range.** actionpack's `data_streaming.rb`
   never looks at `HTTP_RANGE` and hard-codes the status, so an `<audio>` served by either plays
   from the start but can never seek. `Rack::Files#serving` does it properly — 206, `Content-Range`,

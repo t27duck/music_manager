@@ -65,3 +65,19 @@
            focus-visible:outline-accent-500;
   }
 }
+
+/* The playback bar is fixed, so it would otherwise sit on top of the last row
+   of whatever page is open. The class goes on <html>, which Turbo never
+   replaces, so it survives a visit exactly as the player element does. */
+.player-open main {
+  padding-bottom: 6rem;
+}
+
+/* The layout opts into view transitions, and the whole render -- including the
+   move of a data-turbo-permanent node into the new page -- runs inside
+   document.startViewTransition. Naming the player gives it its own transition
+   instead of being captured as part of the root snapshot, which is what makes a
+   moved element flicker. */
+#player {
+  view-transition-name: player;
+}

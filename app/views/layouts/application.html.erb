@@ -64,6 +64,9 @@
 
     <%= turbo_frame_tag "modal" %>
 
+    <%# A sibling of <main>, never inside the songs frame -- see the partial. %>
+    <%= render "shared/player" %>
+
     <div id="toasts" class="pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 flex-col gap-2"
          aria-live="polite" aria-atomic="false">
       <%= render "shared/flashes" %>

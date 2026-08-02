@@ -46,6 +46,26 @@ class MobileLayoutTest < ApplicationSystemTestCase
       "the page scrolls horizontally at #{PHONE.first}px"
   end
 
+  # The player bar is a fixed-width row of controls, so it is the thing most
+  # likely to push the page wider than the screen.
+  test "the page still does not scroll sideways with the player open" do
+    visit root_path
+    click_on "Play #{@song.title}"
+    assert_selector "#player:not([hidden])"
+
+    assert evaluate_script("document.documentElement.scrollWidth <= window.innerWidth"),
+      "the player makes the page scroll horizontally at #{PHONE.first}px"
+  end
+
+  test "the player leaves room for the last row of the page" do
+    visit root_path
+    click_on "Play #{@song.title}"
+    assert_selector "#player:not([hidden])"
+
+    assert evaluate_script("document.documentElement.classList.contains('player-open')"),
+      "the page was not given padding for the player"
+  end
+
   test "a card shows the song's key fields" do
     visit root_path
 

@@ -12,10 +12,13 @@ class AccessibilityTest < ApplicationSystemTestCase
     end
   end
 
+  # checkVisibility, not offsetParent: offsetParent is null for every
+  # position:fixed element, so the old filter silently skipped the whole
+  # playback bar and this audit passed without ever looking at it.
   def unnamed_controls
     page.evaluate_script(<<~JS)
       Array.from(document.querySelectorAll("a, button, input, select"))
-        .filter((el) => el.type !== "hidden" && el.offsetParent !== null)
+        .filter((el) => el.type !== "hidden" && el.checkVisibility())
         .filter((el) => !(el.getAttribute("aria-label") || el.textContent.trim() ||
                           (el.labels && el.labels.length) || el.title ||
                           el.getAttribute("placeholder")))
@@ -46,17 +49,37 @@ class AccessibilityTest < ApplicationSystemTestCase
     assert_empty unnamed_controls
   end
 
-  test "every album cover has alt text" do
-    visit albums_path
-
-    assert_equal 0,
-      page.evaluate_script("Array.from(document.querySelectorAll('img')).filter(i => !i.alt).length")
+  # A missing alt attribute is a bug; alt="" is a deliberate statement that the
+  # image is decorative, which is the right call for the player's cover -- its
+  # title and artist are read out immediately beside it, so naming it too would
+  # just be noise. So this looks for the attribute, not for a non-empty value.
+  def images_without_alt
+    page.evaluate_script(
+      "Array.from(document.querySelectorAll('img')).filter(i => !i.hasAttribute('alt')).length"
+    )
   end
 
-  test "every album art image has alt text" do
+  test "every album cover declares its alt text" do
+    visit albums_path
+
+    assert_equal 0, images_without_alt
+  end
+
+  test "every album art image declares its alt text" do
     visit root_path
 
-    assert_equal 0, page.evaluate_script("Array.from(document.querySelectorAll('img')).filter(i => !i.alt).length")
+    assert_equal 0, images_without_alt
+  end
+
+  # The default fixtures carry no artwork, so they render the placeholder rather
+  # than an <img>; this one needs a song that actually has a cover.
+  test "album art in the song list is named, not merely marked decorative" do
+    create_test_song("art.mp3", title: "Has Artwork",
+      album_art_checksum: "abc123", album_art_content_type: "image/png")
+
+    visit root_path
+
+    assert_selector "tbody img[alt='Album art for Has Artwork']"
   end
 
   test "the song table is named for screen readers" do

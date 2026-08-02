@@ -12,7 +12,10 @@
   </td>
 
   <td class="col-start-2 row-start-1 row-span-4 block self-start py-2 sm:table-cell sm:pl-1 sm:pr-0">
-    <%= render "songs/album_arts/preview", song: song, size: :small %>
+    <div class="relative w-fit">
+      <%= render "songs/album_arts/preview", song: song, size: :small %>
+      <%= render "shared/play_button", song: song %>
+    </div>
   </td>
 
   <%# The title is the thing being read, so on a card it wraps to a second line

@@ -1,0 +1,57 @@
+<%# Kept across visits by data-turbo-permanent, which *moves* this node into the
+    new page rather than re-rendering it -- so the <audio> element, its buffer
+    and its position all survive. Turbo only preserves a node the destination
+    page also renders, which is why it lives in the layout, and it must stay
+    outside the songs frame.
+
+    The media events are bound here rather than in the controller so Stimulus
+    unbinds them when it reconnects, which it does on every visit. %>
+<div id="player" hidden data-turbo-permanent
+     role="region" aria-label="Now playing"
+     class="fixed inset-x-0 bottom-0 z-40 border-t border-surface-800 bg-surface-900/95 backdrop-blur"
+     data-controller="player"
+     data-action="player:play@window->player#play">
+  <audio data-player-target="audio" preload="metadata"
+         data-action="timeupdate->player#tick
+                      loadedmetadata->player#durationLoaded
+                      play->player#render
+                      pause->player#render
+                      ended->player#ended
+                      error->player#failed"></audio>
+
+  <div class="container mx-auto flex items-center gap-3 px-5 py-2.5">
+    <img data-player-target="cover" hidden alt=""
+         class="h-10 w-10 shrink-0 rounded border border-surface-800 bg-surface-900 object-cover">
+
+    <%# Narrow on a phone so the scrub bar keeps a usable width: at 390px the row
+        is exactly full, and every pixel taken here comes out of the slider. %>
+    <div class="min-w-0 shrink-0 basis-28 sm:basis-56">
+      <p class="truncate text-sm font-medium text-surface-100" data-player-target="title"></p>
+      <p class="truncate text-xs text-surface-400" data-player-target="artist"></p>
+    </div>
+
+    <button type="button" class="btn shrink-0" aria-label="Play"
+            data-player-target="toggle"
+            data-action="player#toggle">Play</button>
+
+    <span class="hidden shrink-0 text-xs tabular-nums text-surface-500 sm:inline"
+          data-player-target="elapsed">0:00</span>
+
+    <%= range_field_tag :seek, 0, min: 0, max: 0, step: "any",
+          class: "min-w-0 flex-1 accent-accent-500",
+          aria: { label: "Seek" },
+          data: {
+            player_target: "seek",
+            action: "input->player#tick pointerdown->player#scrubStart " \
+                    "pointerup->player#scrubEnd change->player#scrubEnd"
+          } %>
+
+    <span class="hidden shrink-0 text-xs tabular-nums text-surface-500 sm:inline"
+          data-player-target="duration">0:00</span>
+
+    <button type="button"
+            class="shrink-0 rounded p-1 text-lg leading-none text-surface-500 transition hover:text-surface-100"
+            aria-label="Close player"
+            data-action="player#close">&times;</button>
+  </div>
+</div>
