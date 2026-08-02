@@ -19,8 +19,13 @@ file is the **plan** (what order, what is done, what is known-broken).
 ## Current status
 
 - **Working on:** nothing — all twelve steps are done and every feature in `CLAUDE.md` is built.
-- **Last completed:** Step 12 — Polish & hardening
+- **Last completed:** three backlog items — `LIKE` escaping across all text filters (which also
+  fixed a live 500 from typing `t` into the File path box), the path template as a `Setting`,
+  and the sync skip with its "Full rescan" escape hatch.
 - **Blocked on:** nothing
+
+Four backlog items remain: the mobile card layout, cross-page selection, `sync_runs` auditing,
+and moving `FileOrganizer#apply!` into a job.
 
 Pick work from **Backlog / deferred** below, or add a step for anything new.
 
@@ -231,7 +236,9 @@ test group. Coverage after step 4 is ~98%.
 - [x] ~~Persist the path template as a `Setting` record instead of `session`.~~ — done.
       `Setting` is a generic key/value table with `Setting[:key]` / `Setting[:key] =` accessors,
       so the next preference needs no migration.
-- [ ] Skip re-reading tags during sync when `file_modified_at` is unchanged (needs a "force rescan" escape hatch).
+- [x] ~~Skip re-reading tags during sync when `file_modified_at` is unchanged.~~ — done, with a
+      "Full rescan" button next to "Sync library". On the real 4,892-song library a no-op sync
+      went from **40.2s to 0.26s**; the forced path still takes the full 40s.
 - [x] ~~Ransack's built-in `cont` does not escape `_`/`%`~~ — done. Every text filter is now a
       `Song.contains`-backed scope (`text_contains`, `title_contains`, …) listed once in
       `Song::FILTER_SCOPES`. A custom Ransack predicate turned out to be impossible: Ransack
@@ -241,6 +248,18 @@ test group. Coverage after step 4 is ~98%.
 ## Known issues / gotchas
 
 - `library/` holds the user's real music (543 albums). Never write to it from tests; it is gitignored.
+- **The sync skip keys on whole-second mtime plus `file_size`, not an exact timestamp.** The column
+  is microsecond precision and Active Record *floors* `File::Stat#mtime`'s nanoseconds into it, so
+  an exact comparison can never match on a filesystem that reports them. The blind spot is a file
+  retagged within the same second *and* landing on the same byte length — "Full rescan" exists for
+  exactly that. A song with a NULL `file_modified_at` never skips, which is why rows written before
+  this feature (and everything `LibraryTestHelper#create_test_song` builds) re-import once.
+- **A skipped file still has to be stamped `last_seen_at` before `#prune` runs**, or the second
+  sync deletes the entire library. The batched flush at the end of `import_all` is load-bearing;
+  `test/models/library_sync_test.rb` has a dedicated regression test for it.
+- `LibrarySync::CACHE_KEY` is versioned. `Status` is a `Data` object and the cache Marshals it, so
+  adding a member means an entry written by the old code cannot be loaded into the new shape —
+  production uses SolidCache, which survives a deploy. Bump the key whenever `Status` gains a field.
 - Selenium cannot drive directory drag-and-drop; the upload system test must use the hidden file input.
 - Fixture filenames contain spaces (`test/fixtures/files/song 1.mp3`) — always quote or `File.join`.
 - The `ruby_34` branch of the mp3info fork is required; `master` is upstream 0.8.10 and breaks on

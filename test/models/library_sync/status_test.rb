@@ -3,7 +3,8 @@ require "test_helper"
 class LibrarySync::StatusTest < ActiveSupport::TestCase
   def status(**overrides)
     LibrarySync::Status.new(
-      **{ state: :running, current: 0, total: 0, filename: nil, errors: [], finished_at: nil },
+      **{ state: :running, current: 0, total: 0, filename: nil, errors: [], finished_at: nil,
+          skipped: 0 },
       **overrides
     )
   end

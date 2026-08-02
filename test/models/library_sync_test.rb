@@ -26,6 +26,98 @@ class LibrarySyncTest < ActiveSupport::TestCase
     assert_equal "Retagged Externally", Song.find_by(file_path: path).title
   end
 
+  test "does not re-read a file whose timestamp and size are unchanged" do
+    copy_fixture("song.mp3")
+    LibrarySync.new(@temp_dir).call
+
+    # Neither pruning nor the seen-stamp touches Mp3File, so any call here is a
+    # file being re-read.
+    Mp3File.stub(:new, ->(*) { flunk "re-read a file that had not changed" }) do
+      LibrarySync.new(@temp_dir).call
+    end
+
+    assert_equal 1, LibrarySync.status.skipped
+  end
+
+  # Skipped is not the same as unseen. Without the batched last_seen_at stamp,
+  # #prune deletes the entire library on the second sync.
+  test "a skipped file is not pruned" do
+    copy_fixture("a.mp3")
+    copy_fixture("b.mp3")
+    LibrarySync.new(@temp_dir).call
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal 2, songs_in_temp_dir.count
+    assert_equal 2, LibrarySync.status.skipped
+  end
+
+  test "re-reads a file whose size changed even though its timestamp did not" do
+    path = copy_fixture("song.mp3")
+    LibrarySync.new(@temp_dir).call
+    before = File.stat(path).mtime
+
+    Mp3File.new(path).write_attributes(title: "Retagged In Place")
+    File.utime(before, before, path)
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal "Retagged In Place", Song.find_by(file_path: path).title
+    assert_equal 0, LibrarySync.status.skipped
+  end
+
+  test "force re-reads every file no matter how unchanged it looks" do
+    path = copy_fixture("song.mp3")
+    LibrarySync.new(@temp_dir).call
+    song = Song.find_by(file_path: path)
+    on_disk = song.title
+
+    # update_column bypasses the tag write-through, so the file still holds the
+    # real title and only the database is wrong. A normal sync would skip the
+    # file and never notice; this is exactly what the escape hatch is for.
+    song.update_column(:title, "Wrong")
+
+    LibrarySync.new(@temp_dir, force: true).call
+
+    assert_equal on_disk, song.reload.title
+    assert_equal 0, LibrarySync.status.skipped
+  end
+
+  test "without force, a file whose tags were only changed in the database is left alone" do
+    path = copy_fixture("song.mp3")
+    LibrarySync.new(@temp_dir).call
+    song = Song.find_by(file_path: path)
+    song.update_column(:title, "Wrong")
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal "Wrong", song.reload.title
+    assert_equal 1, LibrarySync.status.skipped
+  end
+
+  test "enqueue passes force through to the job" do
+    assert_enqueued_with(job: LibrarySyncJob, args: [ { force: true } ]) do
+      LibrarySync.enqueue(force: true)
+    end
+  end
+
+  test "enqueue defaults to a timestamp-aware sync" do
+    assert_enqueued_with(job: LibrarySyncJob, args: [ { force: false } ]) do
+      LibrarySync.enqueue
+    end
+  end
+
+  test "a song imported before timestamps were recorded is re-read once" do
+    path = copy_fixture("song.mp3")
+    LibrarySync.new(@temp_dir).call
+    Song.find_by(file_path: path).update_column(:file_modified_at, nil)
+
+    LibrarySync.new(@temp_dir).call
+
+    assert_equal 0, LibrarySync.status.skipped
+    assert_predicate Song.find_by(file_path: path).file_modified_at, :present?
+  end
+
   test "removes songs whose files were deleted from disk" do
     kept = copy_fixture("kept.mp3")
     removed = copy_fixture("removed.mp3")

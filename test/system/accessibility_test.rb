@@ -74,7 +74,7 @@ class AccessibilityTest < ApplicationSystemTestCase
   test "the sync progress bar reports its value" do
     LibrarySync.publish(
       LibrarySync::Status.new(state: :running, current: 3, total: 10,
-        filename: "track.mp3", errors: [], finished_at: nil)
+        filename: "track.mp3", errors: [], finished_at: nil, skipped: 0)
     )
 
     visit root_path

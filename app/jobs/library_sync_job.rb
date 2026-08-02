@@ -1,7 +1,7 @@
 class LibrarySyncJob < ApplicationJob
   queue_as :default
 
-  def perform
-    LibrarySync.call
+  def perform(force: false)
+    LibrarySync.call(force: force)
   end
 end

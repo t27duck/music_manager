@@ -1,6 +1,14 @@
-<span id="sync_button">
+<%# Two sibling forms, not one: button_to renders its own <form>, and nesting
+    them is invalid markup the browser silently discards. %>
+<span id="sync_button" class="flex items-center gap-2">
   <%= button_to sync_path, class: "btn btn-primary", disabled: status&.running? do %>
     <span aria-hidden="true">&#8635;</span>
     <%= status&.running? ? "Syncing…" : "Sync library" %>
   <% end %>
+
+  <%= button_to "Full rescan", sync_path,
+        params: { force: "1" },
+        class: "btn",
+        disabled: status&.running?,
+        title: "Re-read tags for every file, even ones that look unchanged" %>
 </span>

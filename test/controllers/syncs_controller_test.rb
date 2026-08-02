@@ -20,6 +20,24 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-stream[target=sync_status]"
   end
 
+  test "create enqueues a forced sync when the rescan button is used" do
+    assert_enqueued_with(job: LibrarySyncJob, args: [ { force: true } ]) do
+      post sync_url, params: { force: "1" }, as: :turbo_stream
+    end
+  end
+
+  test "create enqueues an ordinary sync by default" do
+    assert_enqueued_with(job: LibrarySyncJob, args: [ { force: false } ]) do
+      post sync_url, as: :turbo_stream
+    end
+  end
+
+  test "create treats a falsey force param as an ordinary sync" do
+    assert_enqueued_with(job: LibrarySyncJob, args: [ { force: false } ]) do
+      post sync_url, params: { force: "0" }, as: :turbo_stream
+    end
+  end
+
   test "create does not start a second sync while one is running" do
     LibrarySync.enqueue
 
@@ -55,6 +73,13 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#sync_button button", text: /Sync library/
   end
 
+  test "the full rescan button renders alongside it" do
+    get root_url
+
+    assert_select "#sync_button button", text: /Full rescan/
+    assert_select "#sync_button input[name=force][value='1']"
+  end
+
   test "the sync button is disabled while a sync is running" do
     LibrarySync.enqueue
 
@@ -67,7 +92,7 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
   test "the progress bar renders while a sync is running" do
     LibrarySync.publish(
       LibrarySync::Status.new(state: :running, current: 3, total: 10,
-        filename: "track.mp3", errors: [], finished_at: nil)
+        filename: "track.mp3", errors: [], finished_at: nil, skipped: 0)
     )
 
     get root_url
@@ -86,7 +111,7 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
   test "a completed sync auto-hides" do
     LibrarySync.publish(
       LibrarySync::Status.new(state: :completed, current: 5, total: 5,
-        filename: nil, errors: [], finished_at: Time.current)
+        filename: nil, errors: [], finished_at: Time.current, skipped: 0)
     )
 
     get root_url
@@ -98,7 +123,7 @@ class SyncsControllerTest < ActionDispatch::IntegrationTest
   test "a failed sync is reported in red" do
     LibrarySync.publish(
       LibrarySync::Status.new(state: :failed, current: 0, total: 0,
-        filename: nil, errors: [ "boom" ], finished_at: Time.current)
+        filename: nil, errors: [ "boom" ], finished_at: Time.current, skipped: 0)
     )
 
     get root_url

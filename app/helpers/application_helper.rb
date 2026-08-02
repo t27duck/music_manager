@@ -28,6 +28,7 @@ module ApplicationHelper
 
   def sync_status_message(status)
     if status.failed? then "Sync failed"
+    elsif status.completed? && status.skipped? then "Sync complete — #{status.skipped} unchanged"
     elsif status.completed? then "Sync complete"
     elsif status.total.zero? then "Scanning library…"
     else "Syncing library…"

@@ -125,6 +125,10 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - Completed status auto-hides after 5 seconds
 - Sync button disabled while sync is running
 - Re-syncing updates existing song metadata instead of skipping
+- Files whose modification time (to the second) and size are both unchanged are left unread, since
+  parsing ID3 and hashing the cover is nearly all of a sync's cost. A "Full rescan" button beside
+  "Sync library" re-reads everything regardless
+- Completed status reports how many files were skipped ("Sync complete — N unchanged")
 - Per-file error handling: individual import failures are logged without aborting the sync
 - MP3 tag string sanitization (invalid UTF-8, null characters)
 
