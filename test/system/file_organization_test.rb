@@ -80,6 +80,9 @@ class FileOrganizationTest < ApplicationSystemTestCase
     click_on "Move 1 file"
     assert_text "1 file moved"
 
+    # The finished job refreshes every open page, so start from a settled one --
+    # a selection made mid-refresh would be thrown away by the reload.
+    visit root_path
     open_organizer_for @other
 
     assert_equal "<Artist>/<Title>", find_field("Path template").value

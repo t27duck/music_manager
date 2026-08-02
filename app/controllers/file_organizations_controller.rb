@@ -21,13 +21,16 @@ class FileOrganizationsController < ApplicationController
       return render :new, status: :unprocessable_entity
     end
 
-    @result = @organizer.apply!(@selected_songs)
+    # Ids are resolved here rather than in the job: once files start moving, a
+    # filter re-run mid-flight would match a different set.
+    enqueued = FileOrganization.enqueue(
+      song_ids: @selected_songs.map(&:id), template: @template.to_s
+    )
 
-    # Remembered only once the moves have actually been made, and outside the
-    # transaction that made them: a template that failed to save is a better
-    # outcome than one remembered for moves that never happened.
-    Setting[:path_template] = @template.to_s
-    load_songs
+    unless enqueued
+      @error = "Something else is already running — try again when it finishes."
+      return render :new, status: :unprocessable_entity
+    end
 
     render :create
   end

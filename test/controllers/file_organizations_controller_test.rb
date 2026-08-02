@@ -2,6 +2,7 @@ require "test_helper"
 
 class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
   include LibraryTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @song = create_test_song("loose/one.mp3", title: "Midnight Drive", artist: "Neon Fields",
@@ -55,9 +56,11 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create moves the selected files" do
-    post file_organizations_url, params: {
-      song_ids: [ @song.id ], template: PathTemplate::DEFAULT
-    }, as: :turbo_stream
+    perform_enqueued_jobs do
+      post file_organizations_url, params: {
+        song_ids: [ @song.id ], template: PathTemplate::DEFAULT
+      }, as: :turbo_stream
+    end
 
     assert_response :success
     expected = target("Neon Fields/Afterglow/07 - Midnight Drive.mp3")
@@ -68,31 +71,48 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
   test "create leaves songs outside the selection alone" do
     original = @other.file_path
 
-    post file_organizations_url, params: {
-      song_ids: [ @song.id ], template: PathTemplate::DEFAULT
-    }, as: :turbo_stream
+    perform_enqueued_jobs do
+      post file_organizations_url, params: {
+        song_ids: [ @song.id ], template: PathTemplate::DEFAULT
+      }, as: :turbo_stream
+    end
 
     assert_equal original, @other.reload.file_path
   end
 
-  test "create dismisses the modal, refreshes the list and reports a summary" do
+  # The list is deliberately not replaced here -- nothing has moved yet. The
+  # refresh arrives from progress/_update once the job finishes, which reloads
+  # each viewer's own URL and so preserves their filters.
+  test "create dismisses the modal and says the work has started" do
     post file_organizations_url, params: {
       song_ids: [ @song.id ], template: "<Artist>/<Title>"
     }, as: :turbo_stream
 
     assert_select "turbo-stream[action=update][target=modal]"
-    assert_select "turbo-stream[action=replace][target=songs]"
-    assert_select "turbo-stream[target=toasts]", text: /1 file moved/
+    assert_select "turbo-stream[target=toasts]", text: /Organizing 1 file/
+    assert_select "turbo-stream[target=songs]", false
   end
 
-  test "create keeps the active filters when re-rendering the list" do
-    post file_organizations_url, params: {
-      song_ids: [ @song.id ],
-      template: "<Artist>/<Title>",
-      q: { title_contains: "Midnight" }
-    }, as: :turbo_stream
+  test "create enqueues the job with the selection resolved to ids" do
+    assert_enqueued_with(job: FileOrganizationJob,
+      args: [ { song_ids: [ @song.id ], template: "<Artist>/<Title>" } ]) do
+      post file_organizations_url, params: {
+        song_ids: [ @song.id ], template: "<Artist>/<Title>"
+      }, as: :turbo_stream
+    end
+  end
 
-    assert_select "turbo-stream[target=songs] #songs_count", text: /1 song/
+  test "create refuses to start while something else is running" do
+    LibrarySync.publish(LibrarySync::Status.starting)
+
+    assert_no_enqueued_jobs(only: FileOrganizationJob) do
+      post file_organizations_url, params: {
+        song_ids: [ @song.id ], template: "<Artist>/<Title>"
+      }, as: :turbo_stream
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[role=alert]", text: /already running/
   end
 
   test "create refuses an invalid template" do
@@ -123,9 +143,12 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[role=alert]", text: /Select some songs/
   end
 
+  # The template is remembered by the job, once the moves have actually happened.
   test "create remembers the template for next time" do
-    post file_organizations_url, params: { song_ids: [ @song.id ], template: "<Genre>/<Title>" },
-      as: :turbo_stream
+    perform_enqueued_jobs do
+      post file_organizations_url, params: { song_ids: [ @song.id ], template: "<Genre>/<Title>" },
+        as: :turbo_stream
+    end
 
     get new_file_organization_url(song_ids: [ @other.id ])
 
@@ -136,8 +159,10 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
   # The reason the template is a Setting rather than session state: it is an app
   # preference, not something about this browser. reset! throws the session away.
   test "create remembers the template even for a new session" do
-    post file_organizations_url, params: { song_ids: [ @song.id ], template: "<Genre>/<Title>" },
-      as: :turbo_stream
+    perform_enqueued_jobs do
+      post file_organizations_url, params: { song_ids: [ @song.id ], template: "<Genre>/<Title>" },
+        as: :turbo_stream
+    end
 
     reset!
 
@@ -154,11 +179,13 @@ class FileOrganizationsControllerTest < ActionDispatch::IntegrationTest
 
   test "create reports failures alongside successes" do
     # Both songs render to the same name; the second is suffixed, not lost.
-    post file_organizations_url, params: {
-      song_ids: [ @song.id, @other.id ], template: "<Album>/Track"
-    }, as: :turbo_stream
+    perform_enqueued_jobs do
+      post file_organizations_url, params: {
+        song_ids: [ @song.id, @other.id ], template: "<Album>/Track"
+      }, as: :turbo_stream
+    end
 
-    assert_select "turbo-stream[target=toasts]", text: /2 files moved/
+    assert_equal "2 files moved.", FileOrganization.status.summary
     assert_not_equal @song.reload.file_path, @other.reload.file_path
   end
 

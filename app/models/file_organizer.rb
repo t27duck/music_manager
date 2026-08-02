@@ -39,21 +39,28 @@ class FileOrganizer
     end
   end
 
+  # Yields (current, total, move) after each file, for a caller that wants to
+  # report progress. Optional, so the synchronous callers and their tests are
+  # unaffected; it yields *after* the move so the count is of completed work.
   def apply!(songs)
     moved = []
     unchanged = []
     failures = []
+    moves = preview(songs)
 
-    preview(songs).each do |move|
+    moves.each_with_index do |move, index|
       if move.failed?
         failures << move
       elsif move.unchanged?
         unchanged << move
       elsif (error = perform(move))
-        failures << Move.new(song: move.song, from: move.from, to: move.to, error: error)
+        move = Move.new(song: move.song, from: move.from, to: move.to, error: error)
+        failures << move
       else
         moved << move
       end
+
+      yield(index + 1, moves.size, move) if block_given?
     end
 
     Result.new(moved: moved, unchanged: unchanged, failures: failures)

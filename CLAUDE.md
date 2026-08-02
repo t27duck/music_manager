@@ -68,7 +68,13 @@ CI pipeline runs: rubocop → bundler-audit → importmap audit → brakeman →
 ## Tech Stack
 
 - **Frontend**: Hotwire (Turbo + Stimulus), Importmap for JS, TailwindCSS v4 (CSS-first, theme in `app/assets/tailwind/application.css` — there is no `tailwind.config.js`)
-- **Background Jobs**: SolidQueue with ActiveJob (production only — see Key Configuration)
+- **Background Jobs**: SolidQueue with ActiveJob (production only — see Key Configuration). Every
+  long-running operation reports through the shared progress component
+  (`app/models/concerns/progress_reporting.rb` + `progress_status.rb`): one cache key, one Turbo
+  Stream, one bar under the nav. Operations are **mutually exclusive** — a sync prunes song rows
+  while an organize moves the files underneath them — so `ProgressReporting.busy?` gates every
+  enqueue. A status put in the cache must hold **primitives only**; it is Marshalled, so an Active
+  Record object in it would bloat the entry and come back stale
 - **Database**: SQLite (storage/ directory)
 - **MP3 Tags**: ruby-mp3info, pinned to the `ruby_34` branch of the fork at github.com/t27duck/ruby-mp3info. That branch is the one that survives Ruby 3.4+ frozen string literals; `master` is upstream 0.8.10 and does not.
 - **Filtering/Pagination**: Ransack, Kaminari
@@ -160,6 +166,8 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - Reorganize files using customizable path templates
 - Template tokens: `<Artist>`, `<Album>`, `<Title>`, `<Genre>`, `<Year>`, `<Disc>`, `<Track>`, `<Track:N>` (zero-padded), `<Filename>`
 - Preview changes before applying
+- Moves run in a background job with live progress, so a large selection cannot time out the
+  request. The modal closes at once and the list refreshes when the job finishes
 - Automatic directory creation
 - Filename sanitization (removes illegal characters)
 - The last applied template is remembered in a `Setting` record, so it survives a cleared

@@ -8,6 +8,23 @@
   <%= render "syncs/sync_button", status: status %>
 <% end %>
 
+<%# The request that started a background operation has long since returned, so
+    its outcome has to be reported here. Only operations that say something
+    worth toasting do; a sync already reports itself in the bar. %>
+<% if status&.finished? && status.respond_to?(:summary) && status.summary.present? %>
+  <%= turbo_stream.append "toasts" do %>
+    <%= render "shared/toast",
+          level: status.errors? ? :warning : :notice, message: status.summary %>
+  <% end %>
+
+  <%# The same three-failure budget the synchronous response used. %>
+  <% status.errors.first(3).each do |message| %>
+    <%= turbo_stream.append "toasts" do %>
+      <%= render "shared/toast", level: :alert, message: message %>
+    <% end %>
+  <% end %>
+<% end %>
+
 <%# A finished operation has changed the song list underneath whatever the
     viewer is looking at. Refreshing rather than broadcasting rendered rows
     means each page reloads its *own* URL, so filters and pagination survive. %>

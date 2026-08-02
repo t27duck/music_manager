@@ -213,6 +213,8 @@ than a huge `NOT IN (...)`.
 | `before_save` tag write, not `after_save`/`after_commit` | Rails only honours `throw :abort` in **before** callbacks — throwing it from `after_save` raises `UncaughtThrowError`. Writing first means a file we cannot write aborts the save and leaves the database untouched, which is the direction that matters: the database must never claim metadata the file does not have. (If the file write succeeds but the DB save then fails, the next sync re-reads the file and reconciles.) |
 | Dev/test stay on the `:async` job adapter | `config/cable.yml` uses the in-process `async` cable adapter in development; a separate solid_queue worker would broadcast progress into its own memory and the browser would never see it. There is also no dev `queue` database. Production already uses solid_queue + solid_cable. |
 | No `sync_runs` / `uploads` tables | Sync progress is transient: `Rails.cache` + a cable broadcast. Upload progress is entirely client-side. |
+| One progress region, and operations are mutually exclusive | A sync prunes song rows while an organize moves the files underneath them, so they must not overlap. One cache key and one bar rather than two stacked ones follows from that: `ProgressReporting.busy?` gates every enqueue, and the bar shows whichever operation is running. |
+| A cached progress status holds primitives only | The cache Marshals it. `FileOrganizer::Result` holds `Move`s holding live `Song` records — storing that would bloat the entry and hand back a stale record on read. Each operation converts its result into counts and strings before publishing. |
 | Turbo Streams for sync, raw cable JSON for upload | Sync state is server-side and its markup is non-trivial; upload state (file list, per-file XHR progress, counter, summary) is already owned by the browser. |
 | ID3 POROs live in `app/models` | Rails-omakase keeps POROs there; avoids a new autoload root. `Mp3File` is the only class that touches `Mp3Info`. |
 | `turbo_stream.refresh` after a sync, not broadcast rows | Each page reloads its *own* URL, so a viewer's filters and page number survive. Broadcasting rendered rows would clobber them. |
@@ -232,7 +234,8 @@ test group. Coverage after step 4 is ~98%.
       need the ids held outside the frame.
 
 - [ ] `sync_runs` table if sync history ever needs auditing — `LibrarySync::Status` is already the right shape.
-- [ ] Move `FileOrganizer#apply!` into a job if selections grow large enough to time out a request.
+- [x] ~~Move `FileOrganizer#apply!` into a job~~ — done. `FileOrganization` wraps it the way
+      `LibrarySync` wraps `LibraryScanner`, reporting through the shared progress component.
 - [x] ~~Persist the path template as a `Setting` record instead of `session`.~~ — done.
       `Setting` is a generic key/value table with `Setting[:key]` / `Setting[:key] =` accessors,
       so the next preference needs no migration.
@@ -283,8 +286,16 @@ test group. Coverage after step 4 is ~98%.
   and filters on `File.extname(...).downcase` instead.
 - `ActionCable::TestHelper` (for `assert_broadcasts`) and `ActiveJob::TestHelper` (for
   `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
-- Rendering a partial from a controller needs `render partial: "syncs/update"`. Plain
-  `render "syncs/update"` looks for a *template* and raises `MissingTemplate`.
+- Rendering a partial from a controller needs `render partial: "progress/update"`. Plain
+  `render "progress/update"` looks for a *template* and raises `MissingTemplate`.
+- **A backgrounded operation's outcome cannot be reported by the request that started it** — that
+  response has long since returned. Summary and failure toasts are appended from
+  `progress/_update.turbo_stream.erb` on `finished?` instead, which is also why the status has to
+  carry the summary string rather than the `Result` object.
+- **A completed operation broadcasts `turbo_stream.refresh`, which reloads every open page.** Any
+  selection or half-typed state at that moment is thrown away. That is correct — the library just
+  changed underneath it — but a system test that interacts right after a completion toast must
+  `visit` a settled page first, or its clicks land in a page that is about to reload.
 - `hidden="<%= false %>"` still hides the element — any value of `hidden` counts in HTML. Use
   `<%= "hidden" if condition %>` in raw tags; Rails' own tag helpers handle `hidden: false` correctly.
 - Enumerating rows right after a Turbo frame swap raises `StaleElementReferenceError`. Wait for the
