@@ -143,7 +143,12 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 - Moderately dark professional theme
 - Toast notifications for user actions
 - Whenever possible, instead of full pages and full redirects with forms, render interfaces in large browser-based modals. On successful submission, dismiss the modal so the user remains on the original song list page. Refresh any active filters and current pagination to reflect changes to the user. Utilize Turbo streams, actions, and frames as needed.
-- Responsive layout and mobile-friendly though the focus should be desktop
+- Responsive layout and mobile-friendly though the focus should be desktop. Below `sm:` the song
+  table reflows into one card per song — art, title and artist prominent, album/genre/year/length
+  subdued — by changing only `display` on the existing elements. Never emit a second markup tree:
+  the row, its checkbox and every editable cell carry `dom_id`s that inline editing, the selection
+  and the album-art stream all address. A `sm:hidden` sort select in the filter panel stands in for
+  the hidden column headers
 - Prefer blues for accent theme colors
 
 ### Metadata Editing

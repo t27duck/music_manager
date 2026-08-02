@@ -69,6 +69,16 @@
         <%= form.search_field :file_path_contains, class: "input", autocomplete: "off" %>
       </div>
 
+      <%# The only sort control below `sm:`, where the sortable column headers
+          are hidden. q[s] is the same scalar string sort_link emits, so this
+          needs no new permit and no new JS -- the surrounding form already
+          auto-submits into the songs frame. %>
+      <div class="sm:hidden">
+        <%= form.label :s, "Sort", class: "label" %>
+        <%= form.select :s, sort_options, { include_blank: "Default order" },
+              class: "input", data: { action: "auto-submit#submit" } %>
+      </div>
+
       <div>
         <%= form.label :missing_metadata, "Missing metadata", class: "label" %>
         <%# Discrete choice, so it submits at once rather than on the text debounce. %>

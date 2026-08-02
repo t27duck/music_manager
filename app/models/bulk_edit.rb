@@ -8,6 +8,10 @@
 class BulkEdit
   include ProgressReporting
 
+  # Uploaded album art waits here between the request that received it and the
+  # job that applies it. Under tmp/, which is gitignored.
+  SPOOL_DIRECTORY = Rails.root.join("tmp/bulk_album_art").to_s.freeze
+
   # Primitives only -- see FileOrganization::Status for why.
   Status = Data.define(:state, :current, :total, :filename, :errors, :finished_at,
                        :updated, :summary) do
@@ -42,14 +46,18 @@ class BulkEdit
 
     # Album art arrives as uploaded bytes, which cannot ride in job arguments.
     # It is spooled to disk at enqueue time and the path is passed instead.
+    #
+    # Deliberately not Tempfile: Tempfile unlinks the file from a GC finalizer,
+    # so handing out its path and dropping the object means the art can vanish
+    # before the job opens it -- which is exactly what happened. This file's
+    # lifetime is owned by the job, which deletes it in an ensure.
     def spool_album_art(data)
       return nil if data.blank?
 
-      file = Tempfile.new([ "bulk_album_art", ".bin" ], Rails.root.join("tmp"))
-      file.binmode
-      file.write(data)
-      file.close
-      file.path
+      FileUtils.mkdir_p(SPOOL_DIRECTORY)
+      path = File.join(SPOOL_DIRECTORY, "#{SecureRandom.hex(16)}.bin")
+      File.binwrite(path, data)
+      path
     end
   end
 

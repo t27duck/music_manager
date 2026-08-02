@@ -32,6 +32,23 @@ module SongsHelper
     safe_join(tags)
   end
 
+  # Sort choices for the mobile select, which stands in for the column headers
+  # when they are hidden. The values are the same `q[s]` strings sort_link
+  # produces, so both routes go through exactly the same Ransack path.
+  SORT_OPTIONS = {
+    "title" => "Title",
+    "artist" => "Artist",
+    "album" => "Album",
+    "year" => "Year",
+    "duration" => "Length"
+  }.freeze
+
+  def sort_options
+    SORT_OPTIONS.flat_map do |column, label|
+      [ [ "#{label} A–Z", "#{column} asc" ], [ "#{label} Z–A", "#{column} desc" ] ]
+    end
+  end
+
   # A sortable column heading. Ransack renders the link and appends its own
   # direction arrow; this only supplies the styling.
   def sort_header(query, attribute, label)

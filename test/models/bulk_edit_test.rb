@@ -93,6 +93,22 @@ class BulkEditTest < ActiveSupport::TestCase
     assert_not File.exist?(path), "the spooled album art outlived a failed run"
   end
 
+  # This spool used to be a Tempfile, whose GC finalizer unlinks the file:
+  # handing out the path and dropping the object let the art vanish before the
+  # job opened it. Only test/system/bulk_update_test.rb reproduced that (a real
+  # worker thread gives GC time to run); GC.start here does not reliably
+  # collect it, so what is pinned instead is the invariant that made the bug
+  # impossible -- the file lives somewhere we own and nothing else may remove it.
+  test "spooled album art is written somewhere this class owns" do
+    path = BulkEdit.spool_album_art(File.binread(fixture_file("cover.jpg")))
+    GC.start
+
+    assert_equal BulkEdit::SPOOL_DIRECTORY, File.dirname(path)
+    assert File.exist?(path), "the spooled album art did not outlive the call that wrote it"
+  ensure
+    FileUtils.rm_f(path) if path
+  end
+
   test "spool_album_art ignores blank data" do
     assert_nil BulkEdit.spool_album_art(nil)
     assert_nil BulkEdit.spool_album_art("")

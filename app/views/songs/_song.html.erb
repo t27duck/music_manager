@@ -1,5 +1,9 @@
-<tr id="<%= dom_id(song) %>" class="group transition hover:bg-surface-850/60">
-  <td class="py-2 pl-4 pr-2">
+<%# One row from `sm:` up; one card below it. Same elements, same ids -- only
+    `display` changes. The mobile grid is four columns: checkbox, art, a fluid
+    text column, and a trailing column sized by the Edit link. %>
+<tr id="<%= dom_id(song) %>"
+    class="group grid grid-cols-[1.25rem_2.75rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 p-3 transition hover:bg-surface-850/60 sm:table-row sm:p-0">
+  <td class="col-start-1 row-start-1 row-span-4 block self-center py-2 sm:table-cell sm:pl-4 sm:pr-2">
     <%= check_box_tag "song_ids[]", song.id, false,
           id: dom_id(song, :select),
           class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500",
@@ -7,21 +11,44 @@
           data: { selection_target: "checkbox", action: "selection#toggle" } %>
   </td>
 
-  <td class="py-2 pl-1 pr-0">
+  <td class="col-start-2 row-start-1 row-span-4 block self-start py-2 sm:table-cell sm:pl-1 sm:pr-0">
     <%= render "songs/album_arts/preview", song: song, size: :small %>
   </td>
 
-  <td class="px-4 py-2.5 font-medium text-surface-100">
-    <%= render "songs/fields/field", song: song, name: "title" %>
+  <%# The title is the thing being read, so on a card it wraps to a second line
+      rather than truncating. From `sm:` it truncates like every other cell. %>
+  <td class="col-start-3 row-start-1 block text-base font-medium text-surface-100 sm:table-cell sm:px-4 sm:py-2.5 sm:text-sm">
+    <%= render "songs/fields/field", song: song, name: "title",
+          classes: "line-clamp-2 sm:truncate" %>
   </td>
-  <td class="px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "artist" %></td>
-  <td class="px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "album" %></td>
-  <td class="px-4 py-2.5"><%= render "songs/fields/field", song: song, name: "genre" %></td>
-  <td class="px-4 py-2.5 tabular-nums"><%= render "songs/fields/field", song: song, name: "year" %></td>
-  <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_track song %></td>
-  <td class="px-4 py-2.5 text-right tabular-nums text-surface-400"><%= formatted_duration song.duration %></td>
 
-  <td class="px-4 py-2.5 text-right">
+  <td class="col-start-3 col-span-2 row-start-2 block sm:table-cell sm:col-span-1 sm:px-4 sm:py-2.5">
+    <%= render "songs/fields/field", song: song, name: "artist" %>
+  </td>
+
+  <td class="col-start-3 row-start-3 block text-xs text-surface-500 sm:table-cell sm:px-4 sm:py-2.5 sm:text-sm sm:text-surface-100">
+    <%= render "songs/fields/field", song: song, name: "album" %>
+  </td>
+
+  <td class="col-start-3 row-start-4 block text-xs text-surface-500 sm:table-cell sm:px-4 sm:py-2.5 sm:text-sm sm:text-surface-100">
+    <%= render "songs/fields/field", song: song, name: "genre" %>
+  </td>
+
+  <td class="col-start-4 row-start-3 block text-right text-xs tabular-nums text-surface-500 sm:table-cell sm:px-4 sm:py-2.5 sm:text-left sm:text-sm sm:text-surface-100">
+    <%= render "songs/fields/field", song: song, name: "year" %>
+  </td>
+
+  <%# Track is the least useful thing on a phone, and the card has no room for
+      it. It is still in the DOM from `sm:` up. %>
+  <td class="hidden sm:table-cell sm:px-4 sm:py-2.5 sm:text-right sm:tabular-nums sm:text-surface-400">
+    <%= formatted_track song %>
+  </td>
+
+  <td class="col-start-4 row-start-4 block text-right text-xs tabular-nums text-surface-500 sm:table-cell sm:px-4 sm:py-2.5 sm:text-sm sm:text-surface-400">
+    <%= formatted_duration song.duration %>
+  </td>
+
+  <td class="col-start-4 row-start-1 block text-right sm:table-cell sm:px-4 sm:py-2.5">
     <%# Always visible rather than hover-only: a hover-only action is invisible
         on touch devices and hard to discover anywhere. %>
     <%= link_to "Edit", edit_song_path(song, **list_state_params),

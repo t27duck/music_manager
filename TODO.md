@@ -230,8 +230,9 @@ test group. Coverage after step 4 is ~98%.
 
 ## Backlog / deferred
 
-- [ ] Mobile shows the song table in a sideways-scrolling wrapper. Fine for a desktop-focused app,
-      but a card layout under `sm:` would be better if mobile use turns out to matter.
+- [x] ~~Mobile shows the song table in a sideways-scrolling wrapper.~~ — done. The same elements
+      reflow into one card per song below `sm:` by changing nothing but `display`, so there is
+      still exactly one set of `dom_id`s and every desktop test passes untouched.
 - [x] ~~Selection is per-page and resets whenever the list re-renders.~~ — done. The selection
       controller wraps the `songs` frame instead of living inside it, and re-applies its ids via
       `checkboxTargetConnected` as rows reconnect. Plus a "Select all N matching" mode that sends
@@ -292,6 +293,21 @@ test group. Coverage after step 4 is ~98%.
   `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
 - Rendering a partial from a controller needs `render partial: "progress/update"`. Plain
   `render "progress/update"` looks for a *template* and raises `MissingTemplate`.
+- **`Tempfile` unlinks its file from a GC finalizer.** Returning `file.path` and dropping the
+  object lets the file vanish at an arbitrary later moment — which is what happened to bulk album
+  art handed to a job. Only the system test caught it, because a real worker thread gives GC time
+  to run. For anything whose lifetime outlives the current method, write to a path you own and
+  delete it yourself.
+- **The mobile card layout is the same markup reflowed, never a second markup tree.** The row, its
+  checkbox and every editable cell carry `dom_id`s that inline editing, the selection and
+  `album_arts/update.turbo_stream.erb` all address; duplicating them would make every one of those
+  lookups ambiguous. `table` and `tbody` must leave table `display` on mobile too, not just `tr` —
+  left as `table`/`table-row-group` the browser regenerates anonymous table boxes around the grid
+  rows and the card layout silently reverts. `display: block` also drops the table's implicit ARIA
+  role there; that is correct for a card list, so do not add `role="table"` back.
+- **A system test that resizes the window must restore it in `teardown`.** Selenium reuses the
+  browser and Capybara's session reset does not restore the size, so a missing teardown silently
+  runs the rest of the suite at phone width.
 - **Anything inside the `songs` frame is destroyed on every filter, sort or page change.** State
   that must outlive that belongs on an element wrapping the frame (see `songs/index.html.erb`).
   The converse trap: URLs built from `list_state_params` must stay *inside* the frame, or they go

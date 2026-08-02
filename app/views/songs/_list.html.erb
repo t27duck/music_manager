@@ -7,11 +7,23 @@
      data-organize-url="<%= new_file_organization_path(**list_state_params) %>"
      data-matching-count="<%= songs.total_count %>">
   <div class="mb-3 flex min-h-8 flex-wrap items-center justify-between gap-3">
-    <%# Announced so a screen reader hears the result of a filter, which
-        otherwise changes the table silently. %>
-    <p class="text-sm text-surface-400" id="songs_count" aria-live="polite">
-      <%= render "songs/count", songs: songs %>
-    </p>
+    <div class="flex items-center gap-3">
+      <%# Out of the table header, where it was invisible below `sm:` once the
+          header was hidden. One instance at every width, so there is still only
+          one toggle_all id. %>
+      <% if songs.any? %>
+        <%= check_box_tag "toggle_all", "1", false,
+              class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500",
+              aria: { label: "Select all songs on this page" },
+              data: { selection_target: "toggleAll", action: "selection#toggleAll" } %>
+      <% end %>
+
+      <%# Announced so a screen reader hears the result of a filter, which
+          otherwise changes the table silently. %>
+      <p class="text-sm text-surface-400" id="songs_count" aria-live="polite">
+        <%= render "songs/count", songs: songs %>
+      </p>
+    </div>
 
     <div class="flex items-center gap-2" data-selection-target="actions" hidden>
       <span class="text-sm text-surface-300">
@@ -37,35 +49,43 @@
 
   <% if songs.any? %>
     <div class="card overflow-hidden">
-      <div class="overflow-x-auto">
-        <%# table-fixed so the columns divide the available width and the cells
-            can truncate; without it a two-hundred-character artist tag pushes
-            the last columns off the screen. Every column but the title is a
-            fixed width, and min-w is their sum plus a usable title, so the
-            title can never be squeezed to nothing on a narrow screen -- the
-            wrapper scrolls sideways instead. %>
-        <table class="w-full min-w-[1020px] table-fixed text-left text-sm" aria-label="Songs">
-          <thead class="border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase">
+      <div class="sm:overflow-x-auto">
+        <%# From `sm:` up this is an ordinary fixed-layout table: the columns
+            divide the available width and the cells truncate, because without
+            that a two-hundred-character artist tag pushes the last columns off
+            the screen. min-w is the fixed columns plus a usable title, so the
+            title is never squeezed to nothing -- the wrapper scrolls sideways.
+
+            Below `sm:` the same elements are reflowed into one card per song by
+            changing nothing but `display`. It has to be *these* elements rather
+            than a second block of markup: the row, its checkbox and every
+            editable cell carry dom_ids that inline editing, the selection and
+            the album-art stream all address, and duplicating them would make
+            every one of those lookups ambiguous.
+
+            table and tbody must leave table display too, not just tr -- left as
+            `table`/`table-row-group` the browser regenerates anonymous table
+            boxes around the grid rows and the card layout silently reverts. %>
+        <table class="block w-full text-left text-sm sm:table sm:min-w-[1020px] sm:table-fixed"
+               aria-label="Songs">
+          <thead class="hidden border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase sm:table-header-group">
             <tr>
-              <th scope="col" class="w-10 py-3 pl-4 pr-2">
-                <%= check_box_tag "toggle_all", "1", false,
-                      class: "size-4 rounded border-surface-600 bg-surface-900 text-accent-500 focus:ring-accent-500",
-                      aria: { label: "Select all songs on this page" },
-                      data: { selection_target: "toggleAll", action: "selection#toggleAll" } %>
-              </th>
+              <th scope="col" class="w-10 py-3 pl-4 pr-2"><span class="sr-only">Select</span></th>
               <th scope="col" class="w-14 py-3 pl-1 pr-0"><span class="sr-only">Album art</span></th>
               <th scope="col" class="px-4 py-3 font-medium"><%= sort_header query, :title, "Title" %></th>
               <th scope="col" class="w-44 px-4 py-3 font-medium"><%= sort_header query, :artist, "Artist" %></th>
               <th scope="col" class="w-44 px-4 py-3 font-medium"><%= sort_header query, :album, "Album" %></th>
               <th scope="col" class="w-24 px-4 py-3 font-medium"><%= sort_header query, :genre, "Genre" %></th>
-              <th scope="col" class="w-16 px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
+              <%# w-20, not w-16: the cell's own padding left about 24px of room,
+                  so every four-digit year rendered as "2…". %>
+              <th scope="col" class="w-20 px-4 py-3 font-medium"><%= sort_header query, :year, "Year" %></th>
               <th scope="col" class="w-16 px-4 py-3 text-right font-medium"><%= sort_header query, :track_number, "Track" %></th>
               <th scope="col" class="w-20 px-4 py-3 text-right font-medium"><%= sort_header query, :duration, "Length" %></th>
               <th scope="col" class="w-16 px-4 py-3"><span class="sr-only">Actions</span></th>
             </tr>
           </thead>
 
-          <tbody class="divide-y divide-surface-800">
+          <tbody class="block divide-y divide-surface-800 sm:table-row-group">
             <%= render partial: "songs/song", collection: songs %>
           </tbody>
         </table>

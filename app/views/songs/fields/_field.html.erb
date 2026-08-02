@@ -6,7 +6,7 @@
   <%# No negative margin here: it would push the cell past its frame, and with
       overflow visible that leaks all the way up to a horizontally scrolling
       page on narrow screens. %>
-  <div class="truncate rounded px-1 py-0.5 transition hover:bg-surface-800"
+  <div class="<%= local_assigns.fetch(:classes, "truncate") %> rounded px-1 py-0.5 transition hover:bg-surface-800"
        title="<%= value.presence || "Double-click to edit" %>"
        data-controller="inline-edit"
        data-inline-edit-url-value="<%= edit_song_field_path(song, name) %>"
