@@ -288,6 +288,9 @@ test group. Coverage after step 4 is ~98%.
   `assert_enqueued_with`) must each be included explicitly; neither is in `ActiveSupport::TestCase`.
 - Rendering a partial from a controller needs `render partial: "progress/update"`. Plain
   `render "progress/update"` looks for a *template* and raises `MissingTemplate`.
+- **An uploaded file is an IO, so reading it twice returns `""` the second time.** The bulk-update
+  controller read `params[:album_art]` once to decide whether anything had changed and again to
+  spool it, and the art was silently dropped. Memoize anything derived from an upload.
 - **A backgrounded operation's outcome cannot be reported by the request that started it** — that
   response has long since returned. Summary and failure toasts are appended from
   `progress/_update.turbo_stream.erb` on `finished?` instead, which is also why the status has to

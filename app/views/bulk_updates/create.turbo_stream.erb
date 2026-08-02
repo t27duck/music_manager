@@ -1,20 +1,10 @@
+<%# The changes are applied in the background -- each one rewrites the song's
+    ID3 tags, which is a whole-file rewrite. This only dismisses the modal and
+    says the work has started; progress/_update reports the outcome and
+    refreshes the list when the job finishes. %>
 <%= turbo_stream.update "modal", "" %>
 
-<%= turbo_stream.replace "songs" do %>
-  <%= turbo_frame_tag "songs", data: { turbo_action: "advance" } do %>
-    <%= render "songs/list", songs: @songs, query: @query %>
-  <% end %>
-<% end %>
-
 <%= turbo_stream.append "toasts" do %>
-  <%= render "shared/toast",
-        level: @result.any_failures? ? :warning : :notice,
-        message: @result.summary %>
-<% end %>
-
-<% @result.failures.first(3).each do |failure| %>
-  <%= turbo_stream.append "toasts" do %>
-    <%= render "shared/toast", level: :alert,
-          message: "#{failure.song.title}: #{failure.message}" %>
-  <% end %>
+  <%= render "shared/toast", level: :notice,
+        message: "Updating #{pluralize(@selected_songs.size, 'song')}…" %>
 <% end %>

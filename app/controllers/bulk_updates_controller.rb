@@ -7,16 +7,25 @@ class BulkUpdatesController < ApplicationController
   end
 
   def create
-    bulk_update = Song::BulkUpdate.new(@selected_songs,
-      attributes: bulk_params, album_art: uploaded_art, remove_album_art: remove_album_art?)
-
-    if @selected_songs.empty? || !bulk_update.changes?
+    if @selected_songs.empty? || !changes?
       @error = "Choose at least one change to apply."
       return render :new, status: :unprocessable_entity
     end
 
-    @result = bulk_update.call
-    load_songs
+    # The work happens in a job: every changed song has its ID3 tags rewritten,
+    # which is a whole-file rewrite, so a large selection cannot be applied
+    # inside the request.
+    enqueued = BulkEdit.enqueue(
+      song_ids: @selected_songs.map(&:id),
+      attributes: bulk_params,
+      album_art_path: BulkEdit.spool_album_art(uploaded_art),
+      remove_album_art: remove_album_art?
+    )
+
+    unless enqueued
+      @error = "Something else is already running — try again when it finishes."
+      return render :new, status: :unprocessable_entity
+    end
 
     render :create
   end
@@ -27,14 +36,27 @@ class BulkUpdatesController < ApplicationController
     end
 
     def bulk_params
-      params.fetch(:bulk_update, {}).permit(*Song::BulkUpdate::FIELDS).to_h
+      @bulk_params ||= params.fetch(:bulk_update, {}).permit(*Song::BulkUpdate::FIELDS).to_h
     end
 
+    # Memoized because the upload is an IO: reading it twice returns "" the
+    # second time, and the art would be silently dropped.
     def uploaded_art
-      params[:album_art].respond_to?(:read) ? params[:album_art].read : nil
+      return @uploaded_art if defined?(@uploaded_art)
+
+      @uploaded_art = params[:album_art].respond_to?(:read) ? params[:album_art].read : nil
     end
 
     def remove_album_art?
       ActiveModel::Type::Boolean.new.cast(params[:remove_album_art]).present?
+    end
+
+    # Song::BulkUpdate owns what counts as a change, so ask it rather than
+    # reimplementing the rule here.
+    def changes?
+      Song::BulkUpdate.new([],
+        attributes: bulk_params,
+        album_art: uploaded_art,
+        remove_album_art: remove_album_art?).changes?
     end
 end

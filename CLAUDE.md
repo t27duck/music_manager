@@ -157,7 +157,11 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 ### Bulk Operations
 
 - Multi-select songs with checkboxes
-- Bulk update metadata fields and album art assignment across multiple songs
+- Bulk update metadata fields and album art assignment across multiple songs. Applied in a
+  background job with live progress: every changed song has its ID3 tags rewritten, which is a
+  whole-file rewrite (~10ms each on a real library), so a large selection cannot be done in the
+  request. Album art is spooled to a tempfile at enqueue time, since the bytes cannot ride in job
+  arguments
 - Select all / deselect all functionality
 - Selection count indicator
 

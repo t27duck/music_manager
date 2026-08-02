@@ -35,16 +35,24 @@ class Song::BulkUpdate
     @remove_album_art = remove_album_art
   end
 
+  # Yields (current, total, song, message) after each song, for a caller that
+  # wants to report progress. Optional, so the synchronous callers and their
+  # tests are unaffected; `message` is nil when the song was updated.
   def call
     updated = []
     failures = []
+    total = songs.size
 
-    songs.each do |song|
-      if (message = apply_to(song))
+    songs.each_with_index do |song, index|
+      message = apply_to(song)
+
+      if message
         failures << Failure.new(song: song, message: message)
       else
         updated << song
       end
+
+      yield(index + 1, total, song, message) if block_given?
     end
 
     Result.new(updated: updated, failures: failures)
