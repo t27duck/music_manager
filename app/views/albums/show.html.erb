@@ -1,0 +1,45 @@
+<% content_for :title, @album.display_name %>
+
+<div class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end">
+  <%= render "songs/album_arts/thumbnail",
+        song_id: @album.cover_song_id,
+        checksum: @album.cover_checksum,
+        alt: "Album art for #{@album.display_name}",
+        size: :large %>
+
+  <div class="min-w-0">
+    <h1 class="text-2xl font-semibold tracking-tight wrap-anywhere"><%= @album.display_name %></h1>
+
+    <p class="mt-1 text-surface-300"><%= @album.display_artist %></p>
+
+    <p class="mt-1 text-sm text-surface-500">
+      <%= pluralize @album.songs_count, "song" %>
+      <% if @album.total_duration.present? %>
+        &middot; <%= formatted_duration @album.total_duration %>
+      <% end %>
+      <%= "· #{@album.years}" if @album.years %>
+    </p>
+  </div>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="sm:overflow-x-auto">
+    <table class="block w-full text-left text-sm sm:table sm:w-full"
+           aria-label="Tracks on <%= @album.display_name %>">
+      <thead class="hidden border-b border-surface-800 bg-surface-850 text-xs tracking-wide text-surface-400 uppercase sm:table-header-group">
+        <tr>
+          <th scope="col" class="w-16 px-4 py-3 text-right font-medium">#</th>
+          <th scope="col" class="px-4 py-3 font-medium">Title</th>
+          <th scope="col" class="w-56 px-4 py-3 font-medium">Artist</th>
+          <th scope="col" class="w-20 px-4 py-3 text-right font-medium">Length</th>
+          <th scope="col" class="w-16 px-4 py-3"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+
+      <tbody class="block divide-y divide-surface-800 sm:table-row-group">
+        <%= render partial: "albums/track", collection: @songs, as: :song,
+              locals: { album: @album } %>
+      </tbody>
+    </table>
+  </div>
+</div>

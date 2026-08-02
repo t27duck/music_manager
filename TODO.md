@@ -261,6 +261,15 @@ test group. Coverage after step 4 is ~98%.
   the file has not. Adding a newly-read tag therefore leaves it unread on every existing song.
   `LibrarySync::TAG_EPOCH` is the escape: bump it and the next sync force-re-reads once, writes the
   new epoch on success, and reverts to skipping. A failed run leaves the epoch behind and retries.
+- **A link inside a turbo frame navigates *within* that frame.** An album card in the `albums`
+  frame loaded the album page into the grid until it got `data: { turbo_frame: "_top" }`. Any link
+  inside a frame that should replace the page needs it.
+- **Kaminari's `total_count` on a `GROUP BY` relation is an Integer here, not the Hash** the usual
+  warning describes (verified: 1,633 groups → `1633`). But it cannot paginate POROs and a relation
+  at once, so the relation slices and `Kaminari.paginate_array(..., total_count:, limit:, offset:)`
+  re-wraps the built objects with the same window.
+- **A grouped `select` returns model instances with `id == nil`.** Handing those to a view invites
+  `song.title` on a phantom record — which is why `Album`/`Artist` are POROs built from the rows.
 - **TPE2 has no generic key in `Mp3Info::TAG_MAPPING_2_3`** (only title/artist/album/year/tracknum/
   comments/genre_s do), so album artist is read and written straight to the frame, like TPOS. It
   needs no three-place `clear_tag`: there is no ID3v1 album-artist field, and `ID3v2#to_bin` skips

@@ -221,6 +221,17 @@ Keep `CLAUDE.md` updated as the project evolves. Update these files when:
 
 - Delete song from library and file permanently from disk
 
+### Browsing
+
+- `/albums` — a paginated cover grid of every `(album_artist, album)` group, with its own search
+  across album and album artist. An album page lists its tracks, naming the track artist only where
+  it differs from the album artist (which is what makes a compilation legible)
+- `Album` is a **PORO, not a table** (`app/models/album.rb`): the file on disk is the source of
+  truth, so a table would need syncing and pruning on every tag edit for no query benefit
+- Album URLs carry the grouping key itself, encoded by `LibraryKey` (JSON inside urlsafe Base64 —
+  it round-trips `nil` and cannot be confused by a delimiter inside a name). A malformed key raises
+  `RecordNotFound`, so a hand-edited URL is a 404 rather than a 500
+
 ## Search & Filtering
 
 ### Global Search

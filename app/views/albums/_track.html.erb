@@ -1,0 +1,26 @@
+<tr id="<%= dom_id(song, :track) %>"
+    class="group flex flex-wrap items-baseline gap-x-3 p-3 transition hover:bg-surface-850/60 sm:table-row sm:p-0">
+  <td class="order-1 w-6 shrink-0 text-right text-xs tabular-nums text-surface-500 sm:table-cell sm:w-16 sm:px-4 sm:py-2.5 sm:text-sm">
+    <%= song.track_number || "—" %>
+  </td>
+
+  <td class="order-2 min-w-0 flex-1 truncate font-medium text-surface-100 sm:table-cell sm:px-4 sm:py-2.5">
+    <%= song.title %>
+  </td>
+
+  <%# Shown only when it differs from the album artist -- which is exactly what
+      makes a compilation legible without repeating "Various Artists" fifty times. %>
+  <td class="order-4 w-full truncate text-xs text-surface-400 sm:table-cell sm:w-auto sm:px-4 sm:py-2.5 sm:text-sm">
+    <%= song.artist if song.artist.present? && song.artist != album.artist %>
+  </td>
+
+  <td class="order-3 shrink-0 text-xs tabular-nums text-surface-500 sm:table-cell sm:px-4 sm:py-2.5 sm:text-right sm:text-sm sm:text-surface-400">
+    <%= formatted_duration song.duration %>
+  </td>
+
+  <td class="order-5 shrink-0 sm:table-cell sm:px-4 sm:py-2.5 sm:text-right">
+    <%= link_to "Edit", edit_song_path(song),
+          class: "rounded-md px-2 py-1 text-xs font-medium text-surface-500 transition hover:bg-surface-800 hover:text-accent-400 group-hover:text-accent-400",
+          data: { turbo_frame: "modal" } %>
+  </td>
+</tr>

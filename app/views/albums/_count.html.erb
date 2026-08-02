@@ -1,0 +1,10 @@
+<% total = albums.total_count %>
+
+<% if total.zero? %>
+  No albums
+<% else %>
+  <%= "#{number_with_delimiter(total)} #{'album'.pluralize(total)}" %>
+  <% if albums.total_pages > 1 %>
+    &middot; page <%= albums.current_page %> of <%= albums.total_pages %>
+  <% end %>
+<% end %>

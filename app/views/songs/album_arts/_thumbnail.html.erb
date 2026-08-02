@@ -1,0 +1,20 @@
+<%# Cover art, or a placeholder.
+    Takes a song id and checksum rather than a Song, so the album grid can render
+    48 covers without loading 48 records. The URL carries the checksum, so a
+    changed image is a different URL and the cached one is never shown by mistake. %>
+<% classes = {
+     small: "h-9 w-9 rounded",
+     medium: "aspect-square w-full rounded-md",
+     large: "h-28 w-28 rounded-lg"
+   }.fetch(size) %>
+
+<% if checksum.present? %>
+  <%= image_tag song_album_art_path(song_id: song_id, v: checksum),
+        alt: alt,
+        loading: "lazy",
+        class: "#{classes} shrink-0 border border-surface-800 bg-surface-900 object-cover" %>
+<% else %>
+  <span class="<%= classes %> flex shrink-0 items-center justify-center border border-surface-800 bg-surface-900 text-surface-700"
+        title="No album art"
+        aria-hidden="true"><%= size == :small ? "♪" : "♫" %></span>
+<% end %>

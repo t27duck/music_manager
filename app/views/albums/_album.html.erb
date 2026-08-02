@@ -1,0 +1,22 @@
+<li>
+  <%# _top, because this card lives inside the `albums` frame: without it the
+      album page would be loaded into the grid rather than replacing it. %>
+  <%= link_to album_path(album), class: "group block space-y-2",
+        data: { turbo_frame: "_top" } do %>
+    <%= render "songs/album_arts/thumbnail",
+          song_id: album.cover_song_id,
+          checksum: album.cover_checksum,
+          alt: "Album art for #{album.display_name}",
+          size: :medium %>
+
+    <div>
+      <%# Two lines are always reserved, so a long title does not push the artist
+          and count down and leave the row of cards ragged. %>
+      <p class="line-clamp-2 min-h-[2.625rem] text-sm font-medium text-surface-100 transition group-hover:text-accent-400">
+        <%= album.display_name %>
+      </p>
+      <p class="line-clamp-1 text-xs text-surface-400"><%= album.display_artist %></p>
+      <p class="text-xs text-surface-500"><%= pluralize album.songs_count, "song" %></p>
+    </div>
+  <% end %>
+</li>

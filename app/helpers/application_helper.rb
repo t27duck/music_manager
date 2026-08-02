@@ -1,7 +1,10 @@
 module ApplicationHelper
   # Navigation link that highlights itself when it points at the current page.
-  def nav_link_to(name, path, **options)
-    active = current_page?(path)
+  #
+  # Pass `active:` for a section rather than a page: current_page?(albums_path)
+  # is false on /albums/:id, which would un-highlight the nav on a show page.
+  def nav_link_to(name, path, active: nil, **options)
+    active = current_page?(path) if active.nil?
     classes = [
       "rounded-md px-3 py-1.5 text-sm font-medium transition",
       active ? "bg-surface-800 text-surface-100" : "text-surface-400 hover:bg-surface-850 hover:text-surface-100"

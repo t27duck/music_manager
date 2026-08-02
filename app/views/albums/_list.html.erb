@@ -1,0 +1,31 @@
+<p class="mb-3 text-sm text-surface-400" id="albums_count" aria-live="polite">
+  <%= render "albums/count", albums: albums %>
+</p>
+
+<% if albums.any? %>
+  <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+    <%= render partial: "albums/album", collection: albums %>
+  </ul>
+
+  <%= paginate albums %>
+<% elsif search.present? %>
+  <div class="card flex flex-col items-center gap-3 px-6 py-16 text-center">
+    <span class="text-4xl text-surface-700" aria-hidden="true">&#9906;</span>
+
+    <h2 class="text-lg font-medium text-surface-200">No albums match your search</h2>
+
+    <%= link_to "Clear search", albums_path, class: "btn mt-1", data: { turbo_frame: "albums" } %>
+  </div>
+<% else %>
+  <div class="card flex flex-col items-center gap-3 px-6 py-16 text-center">
+    <span class="text-4xl text-surface-700" aria-hidden="true">&#9835;</span>
+
+    <h2 class="text-lg font-medium text-surface-200">No albums yet</h2>
+
+    <p class="max-w-md text-sm text-surface-400">
+      Albums are grouped from your files' tags. Add MP3s to
+      <code class="rounded bg-surface-850 px-1.5 py-0.5 text-surface-300"><%= Configuration.library_root %></code>
+      and run a sync to import them.
+    </p>
+  </div>
+<% end %>

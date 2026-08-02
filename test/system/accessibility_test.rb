@@ -36,6 +36,23 @@ class AccessibilityTest < ApplicationSystemTestCase
     assert_empty unnamed_controls
   end
 
+  test "every visible control on the album pages has an accessible name" do
+    visit albums_path
+    assert_selector "li"
+    assert_empty unnamed_controls
+
+    first("li a").click
+    assert_selector "tbody tr"
+    assert_empty unnamed_controls
+  end
+
+  test "every album cover has alt text" do
+    visit albums_path
+
+    assert_equal 0,
+      page.evaluate_script("Array.from(document.querySelectorAll('img')).filter(i => !i.alt).length")
+  end
+
   test "every album art image has alt text" do
     visit root_path
 
@@ -65,7 +82,7 @@ class AccessibilityTest < ApplicationSystemTestCase
   end
 
   test "each page has exactly one level-one heading" do
-    [ root_path, upload_path ].each do |path|
+    [ root_path, upload_path, albums_path, sync_runs_path ].each do |path|
       visit path
       assert_selector "h1", count: 1
     end
