@@ -25,8 +25,14 @@ Rails.application.configure do
     config.action_controller.perform_caching = false
   end
 
-  # Change to :null_store to avoid any caching.
-  config.cache_store = :memory_store
+  # Solid Cache rather than :memory_store: jobs run in their own Solid Queue
+  # process, and progress status lives in the cache, so an in-process store
+  # would leave the web process reading an empty key while the job writes.
+  config.cache_store = :solid_cache_store
+
+  # Same backends as production, so a job that works here works deployed.
+  config.active_job.queue_adapter = :solid_queue
+  config.solid_queue.connects_to = { database: { writing: :queue } }
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

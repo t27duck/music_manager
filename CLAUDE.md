@@ -68,7 +68,8 @@ CI pipeline runs: rubocop → bundler-audit → importmap audit → brakeman →
 ## Tech Stack
 
 - **Frontend**: Hotwire (Turbo + Stimulus), Importmap for JS, TailwindCSS v4 (CSS-first, theme in `app/assets/tailwind/application.css` — there is no `tailwind.config.js`)
-- **Background Jobs**: SolidQueue with ActiveJob (production only — see Key Configuration). Every
+- **Background Jobs**: SolidQueue with ActiveJob, in development as well as production (see Key
+  Configuration). Every
   long-running operation reports through the shared progress component
   (`app/models/concerns/progress_reporting.rb` + `progress_status.rb`): one cache key, one Turbo
   Stream, one bar under the nav. Operations are **mutually exclusive** — a sync prunes song rows
@@ -82,8 +83,19 @@ CI pipeline runs: rubocop → bundler-audit → importmap audit → brakeman →
 ## Key Configuration
 
 - `Configuration.library_root` class method defined in `config/initializers/configuration.rb` - defaults to `{pwd}/library/`, overridable via `LIBRARY_ROOT` ENV variable. In the test environment it defaults to `test/library/` so a test that forgets to stub the root scans an empty directory instead of the real music library.
-- Database files stored in `storage/` directory
-- Background jobs run on the **`:async` adapter in development and test, on purpose**. `config/cable.yml` uses the in-process `async` cable adapter in development, so a separate SolidQueue worker process would broadcast progress into its own memory and the browser would never receive it. Production uses SolidQueue + SolidCable. Do not add a `jobs:` line to `Procfile.dev`.
+- Database files stored in `storage/` directory. Development and production both use the same
+  four-database layout — `primary`, `cache`, `queue`, `cable` — so development has
+  `development_cache.sqlite3`, `development_queue.sqlite3` and `development_cable.sqlite3`
+  alongside `development.sqlite3`. `bin/rails db:prepare` creates all four. Test stays a single
+  database.
+- **Development runs the same Solid backends as production**: SolidQueue for jobs, SolidCache for
+  `Rails.cache`, SolidCable for Action Cable. These three go together and cannot be mixed. Jobs run
+  in a **separate worker process** (`jobs: bin/jobs` in `Procfile.dev`), so an in-process adapter on
+  any of the three would strand progress in the wrong process's memory: the worker writes the
+  progress status to the cache and broadcasts it, and the web process is what serves the page
+  reading it. It also means `bin/rails console` can broadcast to an open browser page. Test still
+  uses `:async` jobs, `:memory_store` and the `test` cable adapter — a single in-process test has no
+  second process to reach.
 - `TODO.md` tracks implementation progress step by step; read it before starting work.
 - Timestamps are rendered with `ApplicationHelper#formatted_time`, which formats through
   `en.time.formats.run` in `config/locales/en.yml` — never inline `strftime`, and absolute rather

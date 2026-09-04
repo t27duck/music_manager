@@ -6,7 +6,8 @@ songs, reorganize files on disk from a path template, and upload new music — a
 from a browser, with no external services.
 
 Built with Rails 8.1 on Ruby 4.0: Hotwire (Turbo + Stimulus) over import maps,
-TailwindCSS v4, SQLite, and SolidQueue/SolidCache/SolidCable in production.
+TailwindCSS v4, SQLite, and SolidQueue/SolidCache/SolidCable — in development as
+well as production, so jobs, caching and live updates behave the same in both.
 
 ## What it does
 
@@ -68,8 +69,14 @@ Then open http://localhost:3000.
 To run the server on its own:
 
 ```bash
-bin/dev              # web + tailwind watcher, port 3000
+bin/dev              # web + tailwind watcher + job worker, port 3000
 ```
+
+`bin/dev` runs three processes: Puma, the Tailwind watcher, and a SolidQueue
+worker (`bin/jobs`). Syncs, bulk edits and file moves are picked up by that
+worker, so if it is not running the progress bar will sit at zero. Development
+uses the same four SQLite databases as production — `bin/setup` and
+`bin/rails db:prepare` create all four.
 
 ## Configuration
 
