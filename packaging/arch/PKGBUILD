@@ -5,7 +5,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="Local MP3 library manager: filter, bulk tag, album art and template-based reorganizing"
 arch=('x86_64')
-license=('custom')
+license=('MIT')
 depends=('webkit2gtk-4.1' 'gtk3' 'glib2' 'cairo' 'pango' 'gdk-pixbuf2' 'libsoup3' 'hicolor-icon-theme')
 makedepends=('rust' 'cargo' 'nodejs' 'npm')
 options=('!lto' '!debug')
@@ -32,4 +32,5 @@ package() {
   install -Dm644 src-tauri/icons/128x128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/music-manager.png"
   install -Dm644 src-tauri/icons/128x128@2x.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/music-manager.png"
   install -Dm644 src-tauri/icons/icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/music-manager.svg"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

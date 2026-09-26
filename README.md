@@ -115,3 +115,7 @@ src-tauri/src/
 docker/              build containers
 packaging/           desktop entry and Arch PKGBUILD
 ```
+
+## License
+
+[MIT](LICENSE)
