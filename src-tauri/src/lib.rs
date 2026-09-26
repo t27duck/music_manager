@@ -56,31 +56,39 @@ pub(crate) fn progress_emitter(app: &AppHandle, kind: &'static str) -> impl FnMu
 /// Scan the configured library in the background, then (re)start watching it.
 pub(crate) fn start_library(app: &AppHandle) {
     let state = app.state::<Arc<AppState>>().inner().clone();
-    let Some(root) = state.root() else { return };
-    if state.scanning.swap(true, Ordering::SeqCst) {
+    if state.root().is_none() || state.scanning.swap(true, Ordering::SeqCst) {
         return;
     }
     let app = app.clone();
     std::thread::spawn(move || {
-        *state.watcher.lock().unwrap() = None;
-        let result = {
-            let _guard = state.op_lock.lock().unwrap();
-            let _ = app.emit("scan-started", ());
-            scanner::full_scan(&state.db, &root, progress_emitter(&app, "scan"))
+        // Drop the old watcher before taking the lock: dropping waits for its handler,
+        // which may itself be waiting on the lock.
+        drop(state.watcher.lock().unwrap().take());
+        let guard = state.op_lock.lock().unwrap();
+        // Read the root only now: the library may have been switched while we waited, in
+        // which case the switch's own start_library call deferred to this scan.
+        let Some(root) = state.root() else {
+            state.scanning.store(false, Ordering::SeqCst);
+            return;
+        };
+        let _ = app.emit("scan-started", ());
+        let result = scanner::full_scan(&state.db, &root, progress_emitter(&app, "scan"));
+        let stale = match watcher::LibraryWatcher::start(app.clone(), state.clone(), root) {
+            Ok(w) => state.watcher.lock().unwrap().replace(w),
+            Err(e) => {
+                let _ = app.emit("scan-failed", format!("could not watch library: {e:#}"));
+                None
+            }
         };
         state.scanning.store(false, Ordering::SeqCst);
+        drop(guard);
+        drop(stale);
         match result {
             Ok(summary) => {
                 let _ = app.emit("scan-finished", summary);
             }
             Err(e) => {
                 let _ = app.emit("scan-failed", format!("{e:#}"));
-            }
-        }
-        match watcher::LibraryWatcher::start(app.clone(), state.clone(), root) {
-            Ok(w) => *state.watcher.lock().unwrap() = Some(w),
-            Err(e) => {
-                let _ = app.emit("scan-failed", format!("could not watch library: {e:#}"));
             }
         }
     });

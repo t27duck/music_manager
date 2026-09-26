@@ -16,7 +16,10 @@ fn main() -> anyhow::Result<()> {
 
     let db = db.lock().unwrap();
     let count = |field: &str, op: &str| {
-        let q = Query { filters: vec![Filter { field: field.into(), op: op.into(), value: String::new() }], ..Default::default() };
+        let q = Query {
+            filters: vec![Filter { field: field.into(), op: op.into(), value: String::new() }],
+            ..Default::default()
+        };
         db.query(&q).map(|r| r.len()).unwrap_or(0)
     };
     let start = Instant::now();

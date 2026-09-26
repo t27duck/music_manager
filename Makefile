@@ -36,7 +36,7 @@ deps: | $(CACHE)
 	$(DOCKER_UBUNTU) npm ci
 
 check: deps
-	$(DOCKER_UBUNTU) sh -c "npm run check && cd src-tauri && cargo check --all-targets && cargo clippy --all-targets -- -D warnings"
+	$(DOCKER_UBUNTU) sh -c "npm run check && cd src-tauri && cargo check --all-targets && cargo clippy --all-targets -- -D warnings && cargo fmt --check"
 
 test: | $(CACHE)
 	$(DOCKER_UBUNTU) sh -c "cd src-tauri && cargo test"
