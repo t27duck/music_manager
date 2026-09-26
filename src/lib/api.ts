@@ -89,6 +89,14 @@ export interface Progress {
   total: number;
 }
 
+export interface PlayerStatus {
+  track_id: number | null;
+  playing: boolean;
+  position_ms: number;
+  duration_ms: number | null;
+  error: string | null;
+}
+
 export interface TokenInfo {
   token: string;
   description: string;
@@ -110,6 +118,11 @@ export const api = {
   applyReorganize: (ids: number[], template: string) => invoke<ApplyResult>('apply_reorganize', { ids, template }),
   saveTemplate: (template: string) => invoke<Config>('save_template', { template }),
   removeTemplate: (template: string) => invoke<Config>('remove_template', { template }),
+  playerPlay: (id: number) => invoke<void>('player_play', { id }),
+  playerToggle: () => invoke<void>('player_toggle'),
+  playerStop: () => invoke<void>('player_stop'),
+  playerSeek: (positionMs: number) => invoke<void>('player_seek', { positionMs }),
+  playerVolume: (volume: number) => invoke<void>('player_volume', { volume }),
 };
 
 export type FieldKind = 'text' | 'number' | 'bool';

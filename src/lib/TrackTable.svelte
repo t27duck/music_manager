@@ -7,7 +7,18 @@
     tracks,
     selected = $bindable(),
     sort = $bindable(),
-  }: { tracks: Track[]; selected: Set<number>; sort: Sort } = $props();
+    playingId = null,
+    playing = false,
+    onplay,
+  }: {
+    tracks: Track[];
+    selected: Set<number>;
+    sort: Sort;
+    playingId?: number | null;
+    playing?: boolean;
+    /** `toggle` asks to pause/resume if this track is already loaded. */
+    onplay: (id: number, toggle: boolean) => void;
+  } = $props();
 
   const ROW_H = 28;
   const HEADER_H = 32;
@@ -95,6 +106,12 @@
       selected = new Set();
       return;
     }
+    if (e.key === ' ') {
+      e.preventDefault();
+      const index = cursor ?? (selected.size === 1 ? tracks.findIndex((t) => selected.has(t.id)) : -1);
+      if (index >= 0) onplay(tracks[index].id, true);
+      return;
+    }
     const page = Math.max(1, Math.floor((viewHeight - HEADER_H) / ROW_H) - 1);
     const moves: Record<string, number> = { ArrowDown: 1, ArrowUp: -1, PageDown: page, PageUp: -page };
     let next: number | null = null;
@@ -150,9 +167,11 @@
         class:odd={index % 2 === 1}
         class:selected={selected.has(t.id)}
         class:cursor={cursor === index}
+        class:playing={playingId === t.id}
         style:grid-template-columns={grid}
         style:transform="translateY({index * ROW_H}px)"
         onclick={(e) => clickRow(e, index)}
+        ondblclick={() => onplay(t.id, false)}
         onmousedown={(e) => e.shiftKey && e.preventDefault()}
         role="row"
         tabindex="-1"
@@ -161,7 +180,9 @@
       >
         {#each COLUMNS as c (c.key)}
           <div class="td" class:right={c.align === 'right'} class:center={c.align === 'center'} role="gridcell">
-            {#if c.key === 'has_art'}
+            {#if c.key === 'track' && playingId === t.id}
+              <span class="now-playing" title={playing ? 'Playing' : 'Paused'}>{playing ? '▶' : '❚❚'}</span>
+            {:else if c.key === 'has_art'}
               {#if t.has_art}<span class="art-dot" title="Has album art"></span>{/if}
             {:else if c.key === 'title' && t.error}
               <span class="error-dot"></span>{c.value(t) || t.filename}
@@ -255,6 +276,13 @@
   }
   .row.cursor {
     border-left-color: var(--cerulean);
+  }
+  .row.playing .td {
+    color: var(--cerulean-light);
+  }
+  .now-playing {
+    color: var(--cerulean);
+    font-size: 10px;
   }
   .td {
     padding: 0 8px;

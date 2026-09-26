@@ -3,7 +3,7 @@ FROM archlinux:latest
 
 RUN pacman -Syu --noconfirm --needed \
       base-devel git rust nodejs npm \
-      webkit2gtk-4.1 gtk3 librsvg openssl xdotool libappindicator-gtk3 \
+      webkit2gtk-4.1 gtk3 librsvg openssl xdotool libappindicator-gtk3 alsa-lib \
     && pacman -Scc --noconfirm
 
 # makepkg refuses to run as root

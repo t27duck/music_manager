@@ -4,7 +4,19 @@
   import { api, errorText, formatDuration, type EditField, type TagEdits, type Track } from './api';
   import { toast } from './toast.svelte';
 
-  let { tracks, onsaved }: { tracks: Track[]; onsaved: () => void } = $props();
+  let {
+    tracks,
+    onsaved,
+    onplay,
+    playingId = null,
+    playing = false,
+  }: {
+    tracks: Track[];
+    onsaved: () => void;
+    onplay: (id: number, toggle: boolean) => void;
+    playingId?: number | null;
+    playing?: boolean;
+  } = $props();
 
   type FieldDef = { key: EditField; label: string; kind: 'text' | 'number' | 'long'; list?: boolean };
   const FIELDS: Record<EditField, FieldDef> = {
@@ -214,7 +226,15 @@
     </div>
   {:else}
     <header>
-      <h2>{multi ? `Editing ${tracks.length} files` : 'Editing 1 file'}</h2>
+      <div class="title-row">
+        <h2>{multi ? `Editing ${tracks.length} files` : 'Editing 1 file'}</h2>
+        {#if !multi}
+          {@const isCurrent = playingId === tracks[0].id}
+          <button class="listen" onclick={() => onplay(tracks[0].id, true)} title="Listen to this file (Space in the list)">
+            {isCurrent && playing ? '❚❚ Pause' : '▶ Listen'}
+          </button>
+        {/if}
+      </div>
       {#if multi}<p class="muted hint">Blank fields are left unchanged. Use × to clear a field on every file.</p>{/if}
     </header>
 
@@ -316,6 +336,19 @@
   header {
     padding: 14px 16px 8px;
     border-bottom: 1px solid var(--navy-800);
+  }
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .listen {
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 14px;
+    border-color: var(--cerulean);
+    color: var(--cerulean-light);
   }
   h2 {
     margin: 0;

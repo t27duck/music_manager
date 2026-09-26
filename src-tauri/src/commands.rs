@@ -245,3 +245,39 @@ pub fn remove_template(state: State<'_, Arc<AppState>>, template: String) -> Cmd
     config.save().map_err(anyhow_err)?;
     Ok(config.clone())
 }
+
+fn player(state: &AppState) -> CmdResult<&crate::player::AudioPlayer> {
+    state.player.get().ok_or_else(|| "audio player is not running".to_string())
+}
+
+#[tauri::command]
+pub fn player_play(state: State<'_, Arc<AppState>>, id: i64) -> CmdResult<()> {
+    let root = require_root(&state)?;
+    let track = state.db.lock().unwrap().get(&[id]).map_err(anyhow_err)?.pop().ok_or("track not found")?;
+    player(&state)?.play(id, root.join(&track.path), track.duration_ms.map(|d| d as u64));
+    Ok(())
+}
+
+#[tauri::command]
+pub fn player_toggle(state: State<'_, Arc<AppState>>) -> CmdResult<()> {
+    player(&state)?.toggle();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn player_stop(state: State<'_, Arc<AppState>>) -> CmdResult<()> {
+    player(&state)?.stop();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn player_seek(state: State<'_, Arc<AppState>>, position_ms: u64) -> CmdResult<()> {
+    player(&state)?.seek(position_ms);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn player_volume(state: State<'_, Arc<AppState>>, volume: f32) -> CmdResult<()> {
+    player(&state)?.set_volume(volume);
+    Ok(())
+}

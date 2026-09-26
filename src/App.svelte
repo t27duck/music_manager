@@ -2,11 +2,12 @@
   import { onMount } from 'svelte';
   import { listen } from '@tauri-apps/api/event';
   import { ask, open } from '@tauri-apps/plugin-dialog';
-  import { api, errorText, type Config, type FilterRow, type Progress, type ScanSummary, type Track } from './lib/api';
+  import { api, errorText, type Config, type FilterRow, type PlayerStatus, type Progress, type ScanSummary, type Track } from './lib/api';
   import FilterBar from './lib/FilterBar.svelte';
   import TrackTable from './lib/TrackTable.svelte';
   import Editor from './lib/Editor.svelte';
   import Reorganize from './lib/Reorganize.svelte';
+  import PlayerBar from './lib/PlayerBar.svelte';
   import { dismiss, toast, toasts } from './lib/toast.svelte';
 
   let config = $state<Config | null>(null);
@@ -20,6 +21,12 @@
   let progress = $state<Progress | null>(null);
   let queryError = $state<string | null>(null);
   let reorganizing = $state<number[] | null>(null);
+  let player = $state<PlayerStatus>({ track_id: null, playing: false, position_ms: 0, duration_ms: null, error: null });
+
+  function play(id: number, toggle: boolean) {
+    const request = toggle && player.track_id === id ? api.playerToggle() : api.playerPlay(id);
+    request.catch((e) => toast(errorText(e), 'error'));
+  }
   let querySeq = 0;
 
   let selectedTracks = $derived(tracks.filter((t) => selected.has(t.id)));
@@ -84,6 +91,9 @@
         toast(e.payload, 'error');
       }),
       listen('library-changed', () => refreshSoon(300)),
+      listen<PlayerStatus>('player', (e) => {
+        player = e.payload;
+      }),
     ];
     api.getConfig().then((c) => {
       config = c;
@@ -154,10 +164,13 @@
     <main>
       <section class="table">
         {#if queryError}<div class="query-error">{queryError}</div>{/if}
-        <TrackTable {tracks} bind:selected bind:sort />
+        <TrackTable {tracks} bind:selected bind:sort playingId={player.track_id} playing={player.playing} onplay={play} />
       </section>
-      <Editor tracks={selectedTracks} onsaved={refresh} />
+      <Editor tracks={selectedTracks} onsaved={refresh} onplay={play} playingId={player.track_id} playing={player.playing} />
     </main>
+    {#if player.track_id !== null}
+      <PlayerBar status={player} />
+    {/if}
     <footer class="status">
       <span>{tracks.length.toLocaleString()} shown</span>
       {#if tracks.length !== libraryCount}<span class="muted">of {libraryCount.toLocaleString()}</span>{/if}

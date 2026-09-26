@@ -17,6 +17,10 @@ startup plus live file watching while the app runs.
   all selected files are pre-filled; differing ones show *(multiple values)*.
 - **Album art**: set (JPEG/PNG/GIF/WebP) or remove the embedded front cover on one or many
   files.
+- **Listen** to a file to check it is what its tags say: double-click a row, press Space,
+  or use *Listen* in the editor. A player bar with seek and volume appears at the bottom.
+  Playback is decoded in-process (no GStreamer plugins needed) and outputs through ALSA,
+  which PipeWire/PulseAudio route as usual.
 - **Reorganize** selected files with a path template, preview every move first, and skip
   conflicts. Folders left without music are removed; loose cover images and the like follow
   their album if it moved as a whole, otherwise they are deleted with the folder.
@@ -55,6 +59,7 @@ dropped, and the `.mp3` extension is always kept. Example:
 | Click / Shift-click / Ctrl-click | Select / select range / toggle |
 | ↑ ↓ PgUp PgDn Home End (+Shift) | Move (extend) selection |
 | Ctrl+A / Esc | Select all shown / clear selection |
+| Double-click / Space | Play the row / play or pause the focused row |
 | Ctrl+F | Focus search |
 | Ctrl+S | Save tag edits |
 
@@ -111,6 +116,7 @@ src-tauri/src/
   watcher.rs         inotify watching
   template.rs        path template rendering
   reorganize.rs      move planning, execution and folder pruning
+  player.rs          preview audio playback
   commands.rs        Tauri commands used by the UI
 docker/              build containers
 packaging/           desktop entry and Arch PKGBUILD

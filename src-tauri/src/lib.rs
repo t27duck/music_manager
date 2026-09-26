@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 pub mod db;
+pub mod player;
 pub mod reorganize;
 pub mod scanner;
 pub mod tags;
@@ -26,6 +27,8 @@ pub struct AppState {
     pub op_lock: Mutex<()>,
     pub scanning: AtomicBool,
     pub watcher: Mutex<Option<watcher::LibraryWatcher>>,
+    /// Started in `setup` once there is an app handle to emit status events with.
+    pub player: std::sync::OnceLock<player::AudioPlayer>,
 }
 
 impl AppState {
@@ -113,12 +116,18 @@ pub fn run() {
         op_lock: Mutex::new(()),
         scanning: AtomicBool::new(false),
         watcher: Mutex::new(None),
+        player: std::sync::OnceLock::new(),
     });
 
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(state)
         .setup(|app| {
+            let handle = app.handle().clone();
+            let player = player::AudioPlayer::start(move |status| {
+                let _ = handle.emit("player", status);
+            });
+            let _ = app.state::<Arc<AppState>>().player.set(player);
             start_library(app.handle());
             Ok(())
         })
@@ -138,6 +147,11 @@ pub fn run() {
             commands::apply_reorganize,
             commands::save_template,
             commands::remove_template,
+            commands::player_play,
+            commands::player_toggle,
+            commands::player_stop,
+            commands::player_seek,
+            commands::player_volume,
         ])
         .run(tauri::generate_context!())
         .expect("error while running MusicManager");

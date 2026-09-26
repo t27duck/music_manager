@@ -45,7 +45,10 @@
       "deb": {
         "files": {
           "/usr/share/doc/music-manager/copyright": "../LICENSE"
-        }
+        },
+        "depends": [
+          "libasound2t64 | libasound2"
+        ]
       }
     }
   }
