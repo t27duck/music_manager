@@ -1,0 +1,23 @@
+# Build environment for the Ubuntu/Debian (.deb) package.
+# Built on 24.04 so the resulting .deb installs on Ubuntu 24.04 and newer.
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential curl wget file ca-certificates pkg-config git \
+      libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+      libayatana-appindicator3-dev librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js (for the Svelte frontend and the Tauri CLI)
+ARG NODE_VERSION=22.20.0
+RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz \
+      | tar -xJ -C /usr/local --strip-components=1
+
+# Rust toolchain
+ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo PATH=/usr/local/cargo/bin:$PATH
+RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable \
+      --component clippy,rustfmt \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
+
+WORKDIR /src

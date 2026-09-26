@@ -1,0 +1,12 @@
+# Build environment for the Arch Linux package (makepkg).
+FROM archlinux:latest
+
+RUN pacman -Syu --noconfirm --needed \
+      base-devel git rust nodejs npm \
+      webkit2gtk-4.1 gtk3 librsvg openssl xdotool libappindicator-gtk3 \
+    && pacman -Scc --noconfirm
+
+# makepkg refuses to run as root
+RUN useradd -m builder && echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+USER builder
+WORKDIR /home/builder
