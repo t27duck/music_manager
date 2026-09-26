@@ -284,7 +284,7 @@
   }
   .toasts {
     position: fixed;
-    right: 18px;
+    left: 18px;
     bottom: 36px;
     z-index: 100;
     display: flex;

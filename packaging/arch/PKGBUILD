@@ -1,0 +1,35 @@
+# Maintainer: Tony Drake <t27duck@gmail.com>
+# Built by `make arch` from a `git archive` of the repository.
+pkgname=music-manager
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Local MP3 library manager: filter, bulk tag, album art and template-based reorganizing"
+arch=('x86_64')
+license=('custom')
+depends=('webkit2gtk-4.1' 'gtk3' 'glib2' 'cairo' 'pango' 'gdk-pixbuf2' 'libsoup3' 'hicolor-icon-theme')
+makedepends=('rust' 'cargo' 'nodejs' 'npm')
+options=('!lto' '!debug')
+source=("music-manager-src.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$srcdir/music-manager"
+  npm ci
+  npm run tauri build -- --no-bundle
+}
+
+check() {
+  cd "$srcdir/music-manager/src-tauri"
+  cargo test --release --lib
+}
+
+package() {
+  cd "$srcdir/music-manager"
+  install -Dm755 src-tauri/target/release/music-manager "$pkgdir/usr/bin/music-manager"
+  install -Dm644 packaging/music-manager.desktop "$pkgdir/usr/share/applications/music-manager.desktop"
+  install -Dm644 src-tauri/icons/32x32.png "$pkgdir/usr/share/icons/hicolor/32x32/apps/music-manager.png"
+  install -Dm644 src-tauri/icons/64x64.png "$pkgdir/usr/share/icons/hicolor/64x64/apps/music-manager.png"
+  install -Dm644 src-tauri/icons/128x128.png "$pkgdir/usr/share/icons/hicolor/128x128/apps/music-manager.png"
+  install -Dm644 src-tauri/icons/128x128@2x.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/music-manager.png"
+  install -Dm644 src-tauri/icons/icon.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/music-manager.svg"
+}

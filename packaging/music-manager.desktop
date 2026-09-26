@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MusicManager
+GenericName=Music Library Manager
+Comment=Browse, filter, tag and reorganize a local MP3 library
+Exec=music-manager
+Icon=music-manager
+Terminal=false
+Categories=AudioVideo;Audio;
+Keywords=mp3;id3;tag;music;library;
+StartupWMClass=music-manager
