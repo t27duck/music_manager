@@ -109,9 +109,19 @@ pub async fn get_art(state: State<'_, Arc<AppState>>, id: i64) -> CmdResult<Opti
             return Ok(None);
         };
         let art = tags::read_art(&root.join(&track.path)).map_err(anyhow_err)?;
-        Ok(art.map(|a| format!("data:{};base64,{}", a.mime, base64::engine::general_purpose::STANDARD.encode(a.data))))
+        Ok(art.as_ref().map(data_url))
     })
     .await
+}
+
+fn data_url(art: &Artwork) -> String {
+    format!("data:{};base64,{}", art.mime, base64::engine::general_purpose::STANDARD.encode(&art.data))
+}
+
+/// Preview an image file chosen as new album art.
+#[tauri::command]
+pub async fn image_preview(path: String) -> CmdResult<String> {
+    blocking(move || Artwork::load(path.as_ref()).map(|a| data_url(&a)).map_err(anyhow_err)).await
 }
 
 #[derive(Serialize)]

@@ -123,6 +123,7 @@ pub fn run() {
             commands::get_tracks,
             commands::distinct_values,
             commands::get_art,
+            commands::image_preview,
             commands::write_tags,
             commands::template_tokens,
             commands::preview_reorganize,
