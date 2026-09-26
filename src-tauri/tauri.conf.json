@@ -40,6 +40,13 @@
       "icons/icon.png"
     ],
     "license": "MIT",
-    "licenseFile": "../LICENSE"
+    "licenseFile": "../LICENSE",
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/doc/music-manager/copyright": "../LICENSE"
+        }
+      }
+    }
   }
 }
