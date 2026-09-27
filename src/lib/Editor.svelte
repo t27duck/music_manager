@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { open } from '@tauri-apps/plugin-dialog';
-  import { api, errorText, formatDuration, type EditField, type TagEdits, type Track } from './api';
+  import { api, errorText, formatDuration, type EditField, type TagEdits, type Track, type WriteResult } from './api';
   import { toast } from './toast.svelte';
 
   let {
@@ -13,7 +13,8 @@
     dirty = $bindable(false),
   }: {
     tracks: Track[];
-    onsaved: () => void;
+    /** After a write, with what was attempted; reporting the outcome is up to the caller. */
+    onsaved: (ids: number[], edits: TagEdits, result: WriteResult) => void;
     onplay: (id: number, toggle: boolean) => void;
     playingId?: number | null;
     playing?: boolean;
@@ -178,16 +179,11 @@
     const ids = tracks.map((t) => t.id);
     saving = true;
     try {
-      const result = await api.writeTags(ids, edits);
-      if (result.failed.length) {
-        const first = result.failed[0];
-        toast(`Saved ${result.updated}, failed ${result.failed.length}. ${first[0]}: ${first[1]}`, 'error');
-      } else {
-        toast(`Saved ${result.updated} file${result.updated === 1 ? '' : 's'}`, 'success');
-      }
+      const attempted = $state.snapshot(edits) as TagEdits;
+      const result = await api.writeTags(ids, attempted);
       reset(await api.getTracks(ids));
       loadSuggestions();
-      onsaved();
+      onsaved(ids, attempted, result);
       return true;
     } catch (e) {
       toast(errorText(e), 'error');

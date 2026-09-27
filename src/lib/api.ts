@@ -59,7 +59,14 @@ export type TagEdits = Partial<Record<TextField, FieldEdit<string>>> &
 
 export interface WriteResult {
   updated: number;
-  failed: [string, string][];
+  failed: WriteFailure[];
+}
+
+export interface WriteFailure {
+  id: number;
+  /** Relative to the library; empty if the file is no longer in the index. */
+  path: string;
+  message: string;
 }
 
 export interface PlanItem {

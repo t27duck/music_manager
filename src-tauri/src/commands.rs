@@ -127,7 +127,15 @@ pub async fn image_preview(path: String) -> CmdResult<String> {
 #[derive(Serialize)]
 pub struct WriteResult {
     updated: usize,
-    failed: Vec<(String, String)>,
+    failed: Vec<WriteFailure>,
+}
+
+#[derive(Serialize)]
+pub struct WriteFailure {
+    id: i64,
+    /// Relative to the library; empty if the file is no longer in the index.
+    path: String,
+    message: String,
 }
 
 #[tauri::command]
@@ -152,6 +160,16 @@ pub async fn write_tags(
         let tracks = state.db.lock().unwrap().get(&ids).map_err(anyhow_err)?;
         let mut progress = progress_emitter(&emit_app, "write");
         let mut result = WriteResult { updated: 0, failed: vec![] };
+        // Files removed since they were selected (e.g. deleted outside the app).
+        for &id in &ids {
+            if !tracks.iter().any(|t| t.id == id) {
+                result.failed.push(WriteFailure {
+                    id,
+                    path: String::new(),
+                    message: "no longer in the library".into(),
+                });
+            }
+        }
         let total = tracks.len();
         for (i, t) in tracks.iter().enumerate() {
             progress(i, total);
@@ -160,12 +178,13 @@ pub async fn write_tags(
                 Ok(new_tags) => {
                     let (mtime, size) = file_stat(&path).unwrap_or_default();
                     if let Err(e) = state.db.lock().unwrap().update_tags(t.id, &new_tags, mtime, size) {
-                        result.failed.push((t.path.clone(), anyhow_err(e)));
+                        let message = format!("tags written, but the index wasn't updated: {}", anyhow_err(e));
+                        result.failed.push(WriteFailure { id: t.id, path: t.path.clone(), message });
                     } else {
                         result.updated += 1;
                     }
                 }
-                Err(e) => result.failed.push((t.path.clone(), anyhow_err(e))),
+                Err(e) => result.failed.push(WriteFailure { id: t.id, path: t.path.clone(), message: anyhow_err(e) }),
             }
         }
         progress(total, total);

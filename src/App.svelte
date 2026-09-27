@@ -3,13 +3,26 @@
   import { listen } from '@tauri-apps/api/event';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { ask, open } from '@tauri-apps/plugin-dialog';
-  import { api, errorText, type Config, type FilterRow, type PlayerStatus, type Progress, type ScanSummary, type Track } from './lib/api';
+  import {
+    api,
+    errorText,
+    type Config,
+    type FilterRow,
+    type PlayerStatus,
+    type Progress,
+    type ScanSummary,
+    type TagEdits,
+    type Track,
+    type WriteFailure,
+    type WriteResult,
+  } from './lib/api';
   import FilterBar from './lib/FilterBar.svelte';
   import TrackTable from './lib/TrackTable.svelte';
   import Editor from './lib/Editor.svelte';
   import Reorganize from './lib/Reorganize.svelte';
   import PlayerBar from './lib/PlayerBar.svelte';
   import UnsavedChanges from './lib/UnsavedChanges.svelte';
+  import SaveFailures from './lib/SaveFailures.svelte';
   import { dismiss, toast, toasts } from './lib/toast.svelte';
 
   let config = $state<Config | null>(null);
@@ -67,6 +80,56 @@
     if (choice === 'cancel') return;
     if (choice === 'discard') editor?.discard();
     p.run();
+  }
+
+  // Files whose last save failed, with the edits that were attempted so they can be retried.
+  // Kept until the file saves or the user clears the list.
+  let failures = $state<Map<number, WriteFailure & { edits: TagEdits }>>(new Map());
+  let failureMessages = $derived(new Map([...failures].map(([id, f]) => [id, f.message])));
+  let report = $state<{ saved: number | null } | null>(null);
+  let retrying = $state(false);
+
+  function recordSave(ids: number[], edits: TagEdits, result: WriteResult, retry = false) {
+    const next = new Map(failures);
+    for (const id of ids) next.delete(id);
+    for (const f of result.failed) next.set(f.id, { ...f, edits });
+    failures = next;
+    // A first save with failures opens the report; a retry updates the open one.
+    if (result.failed.length && !retry) report = { saved: result.updated };
+    if (retry ? result.updated : !result.failed.length) {
+      toast(`Saved ${result.updated.toLocaleString()} file${result.updated === 1 ? '' : 's'}`, 'success');
+    }
+    refresh();
+  }
+
+  async function retryFailures() {
+    retrying = true;
+    try {
+      // Group by the edits each file was meant to get; usually that's a single write.
+      const groups = new Map<TagEdits, number[]>();
+      for (const [id, f] of failures) groups.set(f.edits, [...(groups.get(f.edits) ?? []), id]);
+      for (const [edits, ids] of groups) recordSave(ids, edits, await api.writeTags(ids, edits), true);
+    } catch (e) {
+      toast(errorText(e), 'error');
+    } finally {
+      retrying = false;
+    }
+    if (!failures.size) report = null;
+  }
+
+  function selectFailures() {
+    const ids = [...failures.values()].filter((f) => f.path).map((f) => f.id);
+    guard(async () => {
+      report = null;
+      const shown = () => new Set(tracks.map((t) => t.id));
+      if (ids.some((id) => !shown().has(id))) {
+        search = '';
+        filters = [];
+        await refresh();
+      }
+      const visible = shown();
+      selected = new Set(ids.filter((id) => visible.has(id)));
+    });
   }
 
   function select(next: Set<number>, then?: () => void) {
@@ -226,13 +289,22 @@
     <main>
       <section class="table">
         {#if queryError}<div class="query-error">{queryError}</div>{/if}
-        <TrackTable {tracks} {selected} bind:sort playingId={player.track_id} playing={player.playing} onselect={select} onplay={play} />
+        <TrackTable
+          {tracks}
+          {selected}
+          bind:sort
+          playingId={player.track_id}
+          playing={player.playing}
+          unsaved={failureMessages}
+          onselect={select}
+          onplay={play}
+        />
       </section>
       <Editor
         bind:this={editor}
         bind:dirty={editorDirty}
         tracks={selectedTracks}
-        onsaved={refresh}
+        onsaved={recordSave}
         onplay={play}
         playingId={player.track_id}
         playing={player.playing}
@@ -245,9 +317,30 @@
       <span>{tracks.length.toLocaleString()} shown</span>
       {#if tracks.length !== libraryCount}<span class="muted">of {libraryCount.toLocaleString()}</span>{/if}
       {#if selected.size}<span class="sel">{selected.size.toLocaleString()} selected</span>{/if}
+      {#if failures.size}
+        <span class="spacer"></span>
+        <button class="not-saved" onclick={() => (report = { saved: null })}>
+          {failures.size.toLocaleString()} not saved
+        </button>
+      {/if}
     </footer>
   {/if}
 </div>
+
+{#if report && failures.size}
+  <SaveFailures
+    failures={[...failures.values()]}
+    saved={report.saved}
+    {retrying}
+    onretry={retryFailures}
+    onselect={selectFailures}
+    onforget={() => {
+      failures = new Map();
+      report = null;
+    }}
+    onclose={() => (report = null)}
+  />
+{/if}
 
 {#if pending}
   <UnsavedChanges what={pending.what} canSave={pending.canSave} onchoose={resolvePending} />
@@ -351,6 +444,13 @@
   }
   .status .sel {
     color: var(--cerulean-light);
+  }
+  .status .not-saved {
+    padding: 0 8px;
+    font-size: 12px;
+    border-color: rgba(239, 107, 115, 0.6);
+    color: var(--danger);
+    background: transparent;
   }
   .center {
     flex: 1;

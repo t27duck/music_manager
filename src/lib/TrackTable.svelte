@@ -9,6 +9,7 @@
     sort = $bindable(),
     playingId = null,
     playing = false,
+    unsaved = new Map(),
     onselect,
     onplay,
   }: {
@@ -17,6 +18,8 @@
     sort: Sort;
     playingId?: number | null;
     playing?: boolean;
+    /** Files whose last save failed, with why. */
+    unsaved?: Map<number, string>;
     /** Asks to change the selection; `then` runs only if the change goes ahead. */
     onselect: (next: Set<number>, then?: () => void) => void;
     /** `toggle` asks to pause/resume if this track is already loaded. */
@@ -326,7 +329,9 @@
         role="row"
         tabindex="-1"
         aria-selected={selected.has(t.id)}
-        title={t.error ? `Tag error: ${t.error}` : undefined}
+        class:unsaved={unsaved.has(t.id)}
+        title={[unsaved.has(t.id) && `Not saved: ${unsaved.get(t.id)}`, t.error && `Tag error: ${t.error}`].filter(Boolean).join('\n') ||
+          undefined}
       >
         {#each columns as c (c.key)}
           <div class="td" class:right={c.align === 'right'} class:center={c.align === 'center'} role="gridcell">
@@ -337,7 +342,7 @@
               <!-- the marker replaces the number -->
             {:else if c.key === 'has_art'}
               {#if t.has_art}<span class="art-dot" title="Has album art"></span>{/if}
-            {:else if c.key === 'title' && t.error}
+            {:else if c.key === 'title' && (t.error || unsaved.has(t.id))}
               <span class="error-dot"></span>{c.value(t) || t.filename}
             {:else if c.key === 'title'}
               {c.value(t) || t.filename}
@@ -523,6 +528,9 @@
   }
   .row.cursor {
     border-left-color: var(--cerulean);
+  }
+  .row.unsaved {
+    border-left-color: var(--danger);
   }
   .row.playing .td {
     color: var(--cerulean-light);

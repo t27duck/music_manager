@@ -248,6 +248,51 @@ const tests = {
     await page.close();
   },
 
+  async 'save failures: report, marked rows, retry and select'() {
+    const page = await openApp();
+    await page.evaluate(() => (window.__MOCK_WRITE_FAIL = [2]));
+    const rows = await page.$$('.row');
+    await rows[0].click();
+    await page.keyboard.down('Shift');
+    await rows[2].click();
+    await page.keyboard.up('Shift');
+    await setField(page, 'Genre', 'Rock');
+    await page.click('.editor footer button.primary');
+    await page.waitForSelector('#failures-title');
+    await sleep(200);
+    await shot(page, 'save-failures');
+    const title = await page.$eval('#failures-title', (h) => h.textContent.trim());
+    check(title === '1 file wasn’t saved', `report title: ${title}`);
+    check(await page.$eval('#failures-summary', (p) => p.textContent.includes('The other 2 files were saved')), 'report says the rest saved');
+    check(await page.$eval('[role=alertdialog] .list', (l) => l.textContent.includes('X/2.mp3') && l.textContent.includes('Permission denied')), 'report lists path and error');
+    check(!(await page.$$eval('.toast', (ts) => ts.some((t) => t.textContent.startsWith('Saved')))), 'no success toast');
+
+    await page.keyboard.press('Escape');
+    await sleep(100);
+    check(!(await page.$('#failures-title')), 'Esc closes the report');
+    check(JSON.stringify(await page.$$eval('.row.unsaved', (rs) => rs.map((r) => r.children[1].textContent.trim()))) === '["Two"]', 'failed row is marked');
+    check((await page.$eval('.status .not-saved', (b) => b.textContent.trim())) === '1 not saved', 'status bar counts it');
+
+    await page.type('.search input', 'Gamma');
+    await page.waitForFunction(() => document.querySelectorAll('.row').length === 1);
+    await page.click('.status .not-saved');
+    await page.waitForSelector('#failures-title');
+    check(!(await page.$eval('#failures-summary', (p) => p.textContent.includes('other'))), 'reopened report has no save summary');
+    await page.evaluate(() => [...document.querySelectorAll('[role=alertdialog] button')].find((b) => b.textContent.trim() === 'Select these files').click());
+    await sleep(400);
+    check((await page.$eval('.search input', (i) => i.value)) === '' && JSON.stringify(await rowTitles(page)) === '["Two"]', 'Select clears the search and selects the file');
+
+    await page.click('.status .not-saved');
+    await page.waitForSelector('#failures-title');
+    await page.evaluate(() => (window.__MOCK_WRITE_FAIL = []));
+    await page.click('[role=alertdialog] .primary');
+    await sleep(300);
+    const retry = (await callsOf(page, 'write_tags')).at(-1);
+    check(JSON.stringify(retry) === JSON.stringify({ ids: [2], edits: { genre: { op: 'set', value: 'Rock' } } }), `Retry resends the edits: ${JSON.stringify(retry)}`);
+    check(!(await page.$('#failures-title')) && !(await page.$('.row.unsaved')) && !(await page.$('.status .not-saved')), 'successful retry clears everything');
+    await page.close();
+  },
+
   async 'columns shrink to fit, hide and resize'() {
     const context = await browser.createBrowserContext();
     const page = await openApp({ width: 960, height: 760, context });
