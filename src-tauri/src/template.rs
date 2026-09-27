@@ -253,7 +253,9 @@ mod tests {
             "Unknown Artist/Jazz- Remastered-2011/01 thing.mp3"
         );
         t.album = Some("..".into());
-        assert_eq!(render("<Album>/<Title>", &t).unwrap(), "_./01 thing.mp3");
+        // Windows also drops the trailing dot.
+        let expected = if cfg!(windows) { "_/01 thing.mp3" } else { "_./01 thing.mp3" };
+        assert_eq!(render("<Album>/<Title>", &t).unwrap(), expected);
     }
 
     #[test]
