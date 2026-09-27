@@ -186,15 +186,18 @@
       .map((l) => l.trim())
       .filter((l) => l && !l.startsWith('#'));
     if (lines.length !== 1) return null;
-    let path = lines[0];
+    // Explorer's "Copy as path" wraps the path in quotes.
+    let path = lines[0].replace(/^"(.*)"$/, '$1');
     if (path.startsWith('file://')) {
       try {
-        path = decodeURIComponent(new URL(path).pathname);
+        // file:///C:/x.jpg has the pathname /C:/x.jpg.
+        path = decodeURIComponent(new URL(path).pathname).replace(/^\/([A-Za-z]:\/)/, '$1');
       } catch {
         return null;
       }
     }
-    return path.startsWith('/') && IMAGE_EXT.test(path) ? path : null;
+    const absolute = path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\');
+    return absolute && IMAGE_EXT.test(path) ? path : null;
   }
 
   // Ctrl+V anywhere but a text field sets the album art from a copied image or image file.

@@ -151,7 +151,28 @@ fn clean_segment(seg: &str) -> String {
     while s.len() > 250 {
         s.pop();
     }
-    s
+    if cfg!(windows) {
+        windows_safe(s)
+    } else {
+        s
+    }
+}
+
+/// Windows drops trailing dots and spaces from names and reserves device names such as `CON`
+/// or `com1.txt`, so trim the former and add `_` to the latter.
+fn windows_safe(s: String) -> String {
+    const RESERVED: [&str; 4] = ["CON", "PRN", "AUX", "NUL"];
+    let s = s.trim_end_matches(['.', ' ']);
+    let stem = s.split('.').next().unwrap_or_default().trim_end();
+    let device = RESERVED.iter().any(|r| stem.eq_ignore_ascii_case(r))
+        || (stem.len() == 4
+            && ["COM", "LPT"].iter().any(|p| stem.as_bytes()[..3].eq_ignore_ascii_case(p.as_bytes()))
+            && matches!(stem.as_bytes()[3], b'1'..=b'9'));
+    if device {
+        format!("{stem}_{}", &s[stem.len()..])
+    } else {
+        s.to_string()
+    }
 }
 
 /// Render a template for one track into a path relative to the library root.
@@ -233,6 +254,17 @@ mod tests {
         );
         t.album = Some("..".into());
         assert_eq!(render("<Album>/<Title>", &t).unwrap(), "_./01 thing.mp3");
+    }
+
+    #[test]
+    fn windows_names_are_made_safe() {
+        assert_eq!(windows_safe("Greatest Hits Vol. ".into()), "Greatest Hits Vol");
+        assert_eq!(windows_safe("Con".into()), "Con_");
+        assert_eq!(windows_safe("nul.live".into()), "nul_.live");
+        assert_eq!(windows_safe("COM1".into()), "COM1_");
+        assert_eq!(windows_safe("COM0".into()), "COM0");
+        assert_eq!(windows_safe("Console".into()), "Console");
+        assert_eq!(windows_safe("Bjö".into()), "Bjö");
     }
 
     #[test]

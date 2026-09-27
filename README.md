@@ -87,6 +87,7 @@ make check     # svelte-check, cargo check and clippy
 ```
 
 `make arch` packages the **committed** tree (`git archive HEAD`), so commit first.
+The `.deb` targets Ubuntu 24.04 and newer.
 
 ### macOS (Apple Silicon, unofficial)
 
@@ -102,7 +103,15 @@ npm run tauri build -- --no-bundle
 or run the *macOS build* GitHub Actions workflow and download its artifact, which is
 unsigned: `chmod +x music-manager && xattr -d com.apple.quarantine music-manager`.
 Settings and the index live in `~/Library/Application Support/music-manager/`.
-The `.deb` targets Ubuntu 24.04 and newer.
+
+### Windows (x64, unofficial)
+
+Run the *Windows build* GitHub Actions workflow (it also runs on `v*` tags) and download
+its artifact, an NSIS installer. It isn't signed, so SmartScreen warns on first run:
+*More info → Run anyway*. The installer fetches WebView2 if it's missing. Audio goes
+through WASAPI, *Show in file manager* opens Explorer, and settings and the index live in
+`%APPDATA%\music-manager\`. When reorganizing on Windows, names that Windows can't hold
+(trailing dots or spaces, device names like `CON` or `COM1`) are adjusted.
 
 ### Installing
 

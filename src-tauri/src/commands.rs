@@ -58,7 +58,8 @@ pub fn status(state: State<'_, Arc<AppState>>) -> CmdResult<Status> {
 pub async fn set_library_path(app: AppHandle, state: State<'_, Arc<AppState>>, path: String) -> CmdResult<Config> {
     let state = state.inner().clone();
     let config = blocking(move || {
-        let canonical = std::fs::canonicalize(&path).map_err(|e| format!("{path}: {e}"))?;
+        // dunce avoids Windows' `\\?\C:\...` form, which is awkward to show and to join paths onto.
+        let canonical = dunce::canonicalize(&path).map_err(|e| format!("{path}: {e}"))?;
         if !canonical.is_dir() {
             return Err(format!("{path} is not a folder"));
         }

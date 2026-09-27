@@ -45,7 +45,7 @@ pub fn file_stat(path: &Path) -> Option<(i64, i64)> {
 /// Path relative to the library root using forward slashes, or None if outside it.
 pub fn rel_path(root: &Path, path: &Path) -> Option<String> {
     let rel = path.strip_prefix(root).ok()?;
-    let s = rel.to_str()?.to_string();
+    let s = rel.to_str()?.replace(std::path::MAIN_SEPARATOR, "/");
     (!s.is_empty()).then_some(s)
 }
 

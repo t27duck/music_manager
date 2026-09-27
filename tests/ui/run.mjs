@@ -409,6 +409,12 @@ const tests = {
     await paste(`dt.setData('text/plain', 'file:///home/me/My%20Cover.PNG');`);
     await sleep(150);
     check((await previews()).at(-1).path === '/home/me/My Cover.PNG', 'a pasted image file URI is used');
+    await paste(`dt.setData('text/plain', '"C:\\\\Users\\\\me\\\\cover.jpg"');`);
+    await sleep(150);
+    check((await previews()).at(-1).path === 'C:\\Users\\me\\cover.jpg', 'a quoted Windows path is used');
+    await paste(`dt.setData('text/plain', 'file:///C:/Users/me/My%20Cover.webp');`);
+    await sleep(150);
+    check((await previews()).at(-1).path === 'C:/Users/me/My Cover.webp', 'a Windows file URI is used');
 
     const before = (await previews()).length;
     await (await fieldInput(page, 'Title')).focus();

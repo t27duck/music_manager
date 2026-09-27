@@ -37,13 +37,30 @@ pub fn reveal(path: &Path) -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+/// Opens Explorer at the file's folder with the file selected.
+#[cfg(windows)]
+pub fn reveal(path: &Path) -> Result<()> {
+    use std::os::windows::process::CommandExt;
+
+    // Explorer needs backslashes, and parses `/select,"<path>"` itself rather than by the usual
+    // quoting rules, so the argument is passed raw.
+    let path: std::path::PathBuf = path.components().collect();
+    let mut child = std::process::Command::new("explorer")
+        .raw_arg(format!("/select,\"{}\"", path.display()))
+        .spawn()
+        .context("couldn't run explorer")?;
+    // Explorer exits with 1 even when it worked, so only reap it.
+    std::thread::spawn(move || child.wait());
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 pub fn reveal(_path: &Path) -> Result<()> {
     anyhow::bail!("showing files isn't supported on this platform")
 }
 
 /// `file://` URI for an absolute path, percent-encoding everything but unreserved characters.
-#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+#[cfg(target_os = "linux")]
 fn file_uri(path: &Path) -> String {
     use std::os::unix::ffi::OsStrExt;
 
@@ -58,7 +75,7 @@ fn file_uri(path: &Path) -> String {
     uri
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod tests {
     use super::*;
 

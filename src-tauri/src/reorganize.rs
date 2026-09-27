@@ -110,7 +110,7 @@ fn move_file(from: &Path, to: &Path) -> Result<()> {
     match std::fs::rename(from, to) {
         Ok(()) => Ok(()),
         // Across filesystems (e.g. a library spanning mounts) fall back to copy + delete.
-        Err(e) if e.raw_os_error() == Some(18) => {
+        Err(e) if e.kind() == std::io::ErrorKind::CrossesDevices => {
             std::fs::copy(from, to).with_context(|| format!("copying to {}", to.display()))?;
             std::fs::remove_file(from).with_context(|| format!("removing {}", from.display()))
         }
