@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { listen } from '@tauri-apps/api/event';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { ask, open } from '@tauri-apps/plugin-dialog';
   import { api, errorText, type Config, type FilterRow, type PlayerStatus, type Progress, type ScanSummary, type Track } from './lib/api';
   import FilterBar from './lib/FilterBar.svelte';
@@ -8,6 +9,7 @@
   import Editor from './lib/Editor.svelte';
   import Reorganize from './lib/Reorganize.svelte';
   import PlayerBar from './lib/PlayerBar.svelte';
+  import UnsavedChanges from './lib/UnsavedChanges.svelte';
   import { dismiss, toast, toasts } from './lib/toast.svelte';
 
   let config = $state<Config | null>(null);
@@ -29,7 +31,53 @@
   }
   let querySeq = 0;
 
-  let selectedTracks = $derived(tracks.filter((t) => selected.has(t.id)));
+  let editor = $state<Editor>();
+  let editorDirty = $state(false);
+  // Selected tracks a filter has hidden while the editor had unsaved edits for them; kept so
+  // the edits aren't lost. Dropped on the next refresh without unsaved edits.
+  let held = $state<Track[]>([]);
+
+  let selectedTracks = $derived.by(() => {
+    const shown = tracks.filter((t) => selected.has(t.id));
+    if (shown.length === selected.size) return shown;
+    const ids = new Set(shown.map((t) => t.id));
+    return shown.concat(held.filter((t) => selected.has(t.id) && !ids.has(t.id)));
+  });
+
+  // Something that would throw away unsaved tag edits waiting on the user's answer.
+  let pending = $state<{ run: () => void; what: string; canSave: boolean } | null>(null);
+
+  /** Runs `action` now, or once the user has saved or discarded any unsaved edits. */
+  function guard(action: () => void) {
+    if (!editorDirty || !editor) return action();
+    if (pending) return;
+    const edited = selectedTracks;
+    const what = edited.length === 1 ? `“${edited[0].title || edited[0].filename}”` : `${edited.length.toLocaleString()} files`;
+    pending = { run: action, what, canSave: editor.canSave() };
+  }
+
+  async function resolvePending(choice: 'save' | 'discard' | 'cancel') {
+    const p = pending;
+    if (!p) return;
+    if (choice === 'save' && !(await editor?.save())) {
+      pending = null; // the error toast explains; the edits are still in the editor
+      return;
+    }
+    pending = null;
+    if (choice === 'cancel') return;
+    if (choice === 'discard') editor?.discard();
+    p.run();
+  }
+
+  function select(next: Set<number>, then?: () => void) {
+    const same = next.size === selected.size && [...next].every((id) => selected.has(id));
+    const apply = () => {
+      selected = next;
+      then?.();
+    };
+    if (same) apply();
+    else guard(apply);
+  }
 
   async function refresh() {
     const seq = ++querySeq;
@@ -41,13 +89,18 @@
         desc: sort.desc,
       });
       if (seq !== querySeq) return;
+      const visible = new Set(rows.map((r) => r.id));
+      if (editorDirty) {
+        held = selectedTracks.filter((t) => !visible.has(t.id));
+      } else {
+        held = [];
+        // Keep the selection to what's still visible so edits only touch what you can see.
+        if ([...selected].some((id) => !visible.has(id))) {
+          selected = new Set([...selected].filter((id) => visible.has(id)));
+        }
+      }
       tracks = rows;
       queryError = null;
-      // Keep the selection to what's still visible so edits only touch what you can see.
-      const visible = new Set(rows.map((r) => r.id));
-      if ([...selected].some((id) => !visible.has(id))) {
-        selected = new Set([...selected].filter((id) => visible.has(id)));
-      }
       const status = await api.status();
       libraryCount = status.count;
       scanning = status.scanning;
@@ -94,6 +147,11 @@
       listen<PlayerStatus>('player', (e) => {
         player = e.payload;
       }),
+      getCurrentWindow().onCloseRequested((e) => {
+        if (!editorDirty) return;
+        e.preventDefault();
+        guard(() => getCurrentWindow().destroy());
+      }),
     ];
     api.getConfig().then((c) => {
       config = c;
@@ -102,7 +160,11 @@
     return () => unlisten.forEach((p) => p.then((f) => f()));
   });
 
-  async function chooseLibrary() {
+  function chooseLibrary() {
+    guard(pickLibrary);
+  }
+
+  async function pickLibrary() {
     const path = await open({ directory: true, title: 'Choose your music library folder', defaultPath: config?.library_path ?? undefined });
     if (typeof path !== 'string' || path === config?.library_path) return;
     if (config?.library_path) {
@@ -164,9 +226,17 @@
     <main>
       <section class="table">
         {#if queryError}<div class="query-error">{queryError}</div>{/if}
-        <TrackTable {tracks} bind:selected bind:sort playingId={player.track_id} playing={player.playing} onplay={play} />
+        <TrackTable {tracks} {selected} bind:sort playingId={player.track_id} playing={player.playing} onselect={select} onplay={play} />
       </section>
-      <Editor tracks={selectedTracks} onsaved={refresh} onplay={play} playingId={player.track_id} playing={player.playing} />
+      <Editor
+        bind:this={editor}
+        bind:dirty={editorDirty}
+        tracks={selectedTracks}
+        onsaved={refresh}
+        onplay={play}
+        playingId={player.track_id}
+        playing={player.playing}
+      />
     </main>
     {#if player.track_id !== null}
       <PlayerBar status={player} />
@@ -178,6 +248,10 @@
     </footer>
   {/if}
 </div>
+
+{#if pending}
+  <UnsavedChanges what={pending.what} canSave={pending.canSave} onchoose={resolvePending} />
+{/if}
 
 {#if reorganizing && config}
   <Reorganize ids={reorganizing} {config} onclose={() => (reorganizing = null)} onconfig={(c) => (config = c)} />

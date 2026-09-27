@@ -12,9 +12,13 @@ startup plus live file watching while the app runs.
   field filters (title, artist, album artist, album, genre, year, track/disc numbers,
   composer, comment, has album art, bitrate, duration, file path, folder, file name) with
   operators like *contains*, *is*, *starts with*, *is empty*, `>`, `≤`, …
+  Right-click the column header (or use ⋮) to show or hide columns; drag a column's edge to
+  resize it and double-click the edge to let it fit the window again.
 - **Edit tags** on one file or many. In bulk editing, a blank field is skipped; use the
   × button beside a field to explicitly clear it on every selected file. Fields shared by
   all selected files are pre-filled; differing ones show *(multiple values)*.
+  Selecting other files, switching library or closing the window with unsaved edits asks
+  whether to save or discard them first.
 - **Album art**: set (JPEG/PNG/GIF/WebP) or remove the embedded front cover on one or many
   files.
 - **Listen** to a file to check it is what its tags say: double-click a row, press Space,

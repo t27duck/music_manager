@@ -10,12 +10,15 @@
     onplay,
     playingId = null,
     playing = false,
+    dirty = $bindable(false),
   }: {
     tracks: Track[];
     onsaved: () => void;
     onplay: (id: number, toggle: boolean) => void;
     playingId?: number | null;
     playing?: boolean;
+    /** Out: whether there are unsaved edits. */
+    dirty?: boolean;
   } = $props();
 
   type FieldDef = { key: EditField; label: string; kind: 'text' | 'number' | 'long'; list?: boolean };
@@ -49,7 +52,13 @@
   let artRequest = 0;
 
   let multi = $derived(tracks.length > 1);
-  let selectionKey = $derived(tracks.map((t) => t.id).join(','));
+  // Order-independent: a filter can reorder the tracks being edited without changing them.
+  let selectionKey = $derived(
+    tracks
+      .map((t) => t.id)
+      .sort((a, b) => a - b)
+      .join(','),
+  );
   let withArt = $derived(tracks.filter((t) => t.has_art).length);
 
   const str = (v: string | number | null) => (v == null ? '' : String(v));
@@ -127,8 +136,10 @@
     return out as TagEdits;
   });
 
-  let dirty = $derived(Object.keys(edits).length > 0);
   let hasErrors = $derived(KEYS.some(invalid));
+  $effect(() => {
+    dirty = Object.keys(edits).length > 0;
+  });
 
   function toggleClear(k: EditField) {
     cleared[k] = !cleared[k];
@@ -151,8 +162,19 @@
     }
   }
 
-  async function save() {
-    if (!dirty || hasErrors || saving) return;
+  /** Whether the edits can be saved as they stand (no invalid numbers). */
+  export function canSave() {
+    return !hasErrors;
+  }
+
+  /** Throws the edits away. */
+  export function discard() {
+    reset(tracks);
+  }
+
+  /** Saves the edits; resolves to whether they were written (at least in part). */
+  export async function save(): Promise<boolean> {
+    if (!dirty || hasErrors || saving) return false;
     const ids = tracks.map((t) => t.id);
     saving = true;
     try {
@@ -166,8 +188,10 @@
       reset(await api.getTracks(ids));
       loadSuggestions();
       onsaved();
+      return true;
     } catch (e) {
       toast(errorText(e), 'error');
+      return false;
     } finally {
       saving = false;
     }

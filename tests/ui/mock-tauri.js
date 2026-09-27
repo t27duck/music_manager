@@ -41,8 +41,10 @@
           return { library_path: '/music', templates: ['<AlbumArtist>/<Album>/<Track:2> <Title>'] };
         case 'status':
           return { library_path: '/music', scanning: false, count: tracks.length };
-        case 'query_tracks':
-          return tracks;
+        case 'query_tracks': {
+          const q = args.query.search.toLowerCase();
+          return q ? tracks.filter((t) => [t.title, t.artist, t.album, t.path].some((v) => v?.toLowerCase().includes(q))) : tracks;
+        }
         case 'get_tracks':
           return tracks.filter((t) => args.ids.includes(t.id));
         case 'distinct_values':

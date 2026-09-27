@@ -41,9 +41,10 @@ await server.listen();
 const url = 'http://localhost:5199/';
 const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox'] });
 
-async function openApp({ trackCount } = {}) {
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1440, height: 860 });
+// `context` gives the page its own storage (the column layout is kept in localStorage).
+async function openApp({ trackCount, width = 1440, height = 860, context = browser } = {}) {
+  const page = await context.newPage();
+  await page.setViewport({ width, height });
   page.on('pageerror', (e) => check(false, `page error: ${e.message}`));
   if (trackCount) await page.evaluateOnNewDocument((n) => (window.__MOCK_TRACK_COUNT = n), trackCount);
   await page.evaluateOnNewDocument(mock);
@@ -66,6 +67,17 @@ async function setField(page, label, value) {
   await page.keyboard.press('Backspace');
   if (value) await input.type(value);
 }
+const rowTitles = (page) => page.$$eval('.row.selected', (rows) => rows.map((r) => r.children[1].textContent.trim()));
+const headerLabels = (page) => page.$$eval('.header .th-cell', (cells) => cells.map((c) => c.textContent.trim()));
+async function editTitleThenClickRow(page, rowIndex) {
+  await (await page.$$('.row'))[0].click();
+  await setField(page, 'Title', 'Edited');
+  await (await page.$$('.row'))[rowIndex].click();
+  await page.waitForSelector('[role=alertdialog]');
+}
+const dialogButton = (page, label) =>
+  page.evaluate((l) => [...document.querySelectorAll('[role=alertdialog] button')].find((b) => b.textContent.trim() === l).click(), label);
+
 async function shot(page, name) {
   if (!process.env.SCREENSHOTS) return;
   fs.mkdirSync(shotsDir, { recursive: true });
@@ -162,6 +174,118 @@ const tests = {
     check(seek && Math.abs(seek.positionMs - 100000) < 5000, `seek to middle: ${JSON.stringify(seek)}`);
     await shot(page, 'player');
     await page.close();
+  },
+
+  async 'unsaved edits: changing the selection asks first'() {
+    const page = await openApp();
+    await editTitleThenClickRow(page, 1);
+    check((await page.$eval('[role=alertdialog] h2', (h) => h.textContent)) === 'Save changes to “One”?', 'dialog names the file');
+    await shot(page, 'unsaved-changes');
+
+    await dialogButton(page, 'Cancel');
+    await sleep(100);
+    check(!(await page.$('[role=alertdialog]')), 'Cancel closes the dialog');
+    check(JSON.stringify(await rowTitles(page)) === '["One"]', 'Cancel keeps the selection');
+    check((await (await fieldInput(page, 'Title')).evaluate((el) => el.value)) === 'Edited', 'Cancel keeps the edit');
+
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('[role=alertdialog]');
+    check(true, 'Esc in the table asks too');
+    await page.keyboard.press('Escape');
+    await sleep(100);
+    check(!(await page.$('[role=alertdialog]')) && (await rowTitles(page)).length === 1, 'Esc in the dialog cancels');
+
+    await (await page.$$('.row'))[1].click();
+    await page.waitForSelector('[role=alertdialog]');
+    await dialogButton(page, 'Discard changes');
+    await sleep(200);
+    check(JSON.stringify(await rowTitles(page)) === '["Two"]', 'Discard moves the selection');
+    check((await callsOf(page, 'write_tags')).length === 0, 'Discard writes nothing');
+
+    await setField(page, 'Title', 'Also edited');
+    await (await page.$$('.row'))[2].click();
+    await page.waitForSelector('[role=alertdialog]');
+    await dialogButton(page, 'Save');
+    await sleep(300);
+    const [w] = await callsOf(page, 'write_tags');
+    check(JSON.stringify(w) === JSON.stringify({ ids: [2], edits: { title: { op: 'set', value: 'Also edited' } } }), `Save writes the edit: ${JSON.stringify(w)}`);
+    check(JSON.stringify(await rowTitles(page)) === '["Three"]', 'Save then moves the selection');
+
+    await (await page.$$('.row'))[2].click();
+    await sleep(100);
+    check(!(await page.$('[role=alertdialog]')), 'no dialog without unsaved edits');
+    await page.close();
+  },
+
+  async 'unsaved edits survive a filter that hides the file'() {
+    const page = await openApp();
+    await (await page.$$('.row'))[0].click();
+    await setField(page, 'Title', 'Edited');
+    await page.type('.search input', 'Beta');
+    await page.waitForFunction(() => document.querySelectorAll('.row').length === 1);
+    await sleep(100);
+    check((await (await fieldInput(page, 'Title')).evaluate((el) => el.value)) === 'Edited', 'edit still in the editor');
+    await page.click('.editor footer button.primary');
+    await sleep(300);
+    const [w] = await callsOf(page, 'write_tags');
+    check(JSON.stringify(w?.ids) === '[1]', `saves to the hidden file: ${JSON.stringify(w)}`);
+    await sleep(300);
+    check(await page.$eval('.editor', (e) => e.textContent.includes('Select one or more tracks')), 'after saving, the hidden file is deselected');
+    await page.close();
+  },
+
+  async 'unsaved edits: closing the window asks first'() {
+    const page = await openApp();
+    const close = () => page.evaluate(() => window.__emit('tauri://close-requested', null));
+    await (await page.$$('.row'))[0].click();
+    await setField(page, 'Title', 'Edited');
+    await close();
+    await page.waitForSelector('[role=alertdialog]');
+    check((await callsOf(page, 'plugin:window|destroy')).length === 0, 'window stays open while asking');
+    await dialogButton(page, 'Discard changes');
+    await sleep(100);
+    check((await callsOf(page, 'plugin:window|destroy')).length === 1, 'Discard closes the window');
+    await page.close();
+  },
+
+  async 'columns shrink to fit, hide and resize'() {
+    const context = await browser.createBrowserContext();
+    const page = await openApp({ width: 960, height: 760, context });
+    const fit = await page.$eval('.scroller', (e) => e.scrollWidth - e.clientWidth);
+    check(fit <= 0, `all columns fit a 960px window (overflow ${fit}px)`);
+    await shot(page, 'narrow');
+
+    await page.click('.header', { button: 'right' });
+    await page.waitForSelector('.menu');
+    await shot(page, 'column-menu');
+    await page.evaluate(() => [...document.querySelectorAll('.menu button')].find((b) => b.textContent.includes('Path')).click());
+    check(!(await headerLabels(page)).includes('Path'), 'Path column hidden from the menu');
+    check(await page.$eval('.menu button[disabled]', (b) => b.textContent.includes('Title')), 'Title cannot be hidden');
+    await page.keyboard.press('Escape');
+    check(!(await page.$('.menu')), 'Esc closes the menu');
+
+    const artist = await page.$$eval('.header .th-cell', (cells) => cells.findIndex((c) => c.textContent.trim() === 'Artist'));
+    const cell = (await page.$$('.header .th-cell'))[artist];
+    const before = (await cell.boundingBox()).width;
+    const handle = await (await cell.$('.resize')).boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + 80, handle.y + handle.height / 2, { steps: 4 });
+    await page.mouse.up();
+    const after = (await cell.boundingBox()).width;
+    check(Math.abs(after - before - 80) < 6, `dragging the edge resizes (${before} → ${after})`);
+    check(!(await page.$('.th.sorted')), 'resizing does not sort');
+
+    await page.reload();
+    await page.waitForSelector('.row');
+    const labels = await headerLabels(page);
+    const width = (await (await page.$$('.header .th-cell'))[labels.indexOf('Artist')].boundingBox()).width;
+    check(!labels.includes('Path') && Math.abs(width - after) < 2, 'layout is remembered');
+
+    await page.click('.columns-button');
+    await page.evaluate(() => [...document.querySelectorAll('.menu button')].find((b) => b.textContent.includes('Reset columns')).click());
+    check((await headerLabels(page)).includes('Path'), 'Reset columns shows everything again');
+    await context.close();
   },
 
   async 'large library stays responsive (6000 rows)'() {
