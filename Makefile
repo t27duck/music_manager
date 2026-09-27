@@ -11,12 +11,13 @@ DOCKER_UBUNTU = docker run --rm -u $(UID):$(GID) -e HOME=/tmp/home \
 	-v $(CURDIR):/src -v $(CACHE)/cargo:/usr/local/cargo/registry \
 	-v $(CACHE)/npm:/tmp/home/.npm $(UBUNTU_IMAGE)
 
-.PHONY: help images image-ubuntu image-arch deps check test lint deb arch package clean
+.PHONY: help images image-ubuntu image-arch deps check test test-ui deb arch package clean
 
 help:
 	@echo "make images   - build the Ubuntu and Arch build containers"
 	@echo "make check    - cargo check + svelte-check (Ubuntu container)"
 	@echo "make test     - run Rust unit tests (Ubuntu container)"
+	@echo "make test-ui  - headless UI tests on the host (needs Chromium)"
 	@echo "make deb      - build the .deb into $(DIST)/"
 	@echo "make arch     - build the Arch .pkg.tar.zst into $(DIST)/"
 	@echo "make package  - build both packages"
@@ -40,6 +41,9 @@ check: deps
 
 test: | $(CACHE)
 	$(DOCKER_UBUNTU) sh -c "cd src-tauri && cargo test"
+
+test-ui: deps
+	npm run test:ui
 
 deb: deps
 	$(DOCKER_UBUNTU) npm run tauri build -- --bundles deb

@@ -73,6 +73,7 @@ make deb       # dist/MusicManager_<version>_amd64.deb
 make arch      # dist/music-manager-<version>-1-x86_64.pkg.tar.zst
 make package   # both
 make test      # Rust unit tests
+make test-ui   # headless UI tests against a mocked backend (host; needs Chromium)
 make check     # svelte-check, cargo check and clippy
 ```
 
