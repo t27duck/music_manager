@@ -64,6 +64,7 @@ dropped, and the `.mp3` extension is always kept. Example:
 | ↑ ↓ PgUp PgDn Home End (+Shift) | Move (extend) selection |
 | Ctrl+A / Esc | Select all shown / clear selection |
 | Double-click / Space | Play the row / play or pause the focused row |
+| Right-click / Menu key / Shift+F10 | Row menu: play, edit, reorganize, show in file manager, copy path |
 | Ctrl+F | Focus search |
 | Ctrl+S | Save tag edits |
 

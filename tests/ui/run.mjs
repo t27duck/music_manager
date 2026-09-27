@@ -293,6 +293,63 @@ const tests = {
     await page.close();
   },
 
+  async 'row context menu'() {
+    const page = await openApp();
+    await page.evaluate(() => {
+      window.__copied = [];
+      navigator.clipboard.writeText = async (t) => window.__copied.push(t);
+    });
+    const menuLabels = () => page.$$eval('.menu [role=menuitem]', (bs) => bs.map((b) => b.querySelector('.label').textContent.trim()));
+    const choose = (label) =>
+      page.evaluate((l) => [...document.querySelectorAll('.menu [role=menuitem]')].find((b) => b.textContent.includes(l)).click(), label);
+
+    await (await page.$$('.row'))[1].click({ button: 'right' });
+    await page.waitForSelector('.menu');
+    await shot(page, 'row-menu');
+    check(JSON.stringify(await rowTitles(page)) === '["Two"]', 'right-click selects the row');
+    const labels = await menuLabels();
+    check(JSON.stringify(labels) === JSON.stringify(['Play', 'Edit tags', 'Reorganize 1 file…', 'Show in file manager', 'Copy path']), `items: ${labels}`);
+    check(await page.evaluate(() => document.activeElement.closest('.menu') !== null), 'menu takes focus');
+    await page.keyboard.press('Escape');
+    check(!(await page.$('.menu')), 'Esc closes it');
+
+    await (await page.$$('.row'))[1].click({ button: 'right' });
+    await page.waitForSelector('.menu');
+    await choose('Show in file manager');
+    await sleep(100);
+    check(JSON.stringify(await callsOf(page, 'show_in_folder')) === '[{"id":2}]', 'Show in file manager asks for the clicked file');
+
+    await (await page.$$('.row'))[1].click({ button: 'right' });
+    await page.waitForSelector('.menu');
+    await choose('Edit tags');
+    await sleep(100);
+    check(await page.evaluate(() => document.activeElement === document.querySelector('.editor .fields input')), 'Edit tags focuses the title field');
+
+    const rows = await page.$$('.row');
+    await rows[0].click();
+    await page.keyboard.down('Shift');
+    await rows[2].click();
+    await page.keyboard.up('Shift');
+    await rows[2].click({ button: 'right' });
+    await page.waitForSelector('.menu');
+    check(JSON.stringify(await rowTitles(page)) === '["One","Two","Three"]', 'right-click inside the selection keeps it');
+    check((await menuLabels()).includes('Reorganize 3 files…'), 'items count the selection');
+    await choose('Copy 3 paths');
+    await sleep(100);
+    const copied = await page.evaluate(() => window.__copied.at(-1));
+    check(copied === '/music/X/1.mp3\n/music/X/2.mp3\n/music/Y/3.mp3', `copies full paths: ${JSON.stringify(copied)}`);
+
+    await (await page.$$('.row'))[0].click();
+    await page.keyboard.press('ContextMenu');
+    await page.waitForSelector('.menu');
+    check(true, 'the Menu key opens it for the focused row');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await sleep(100);
+    check(await page.evaluate(() => document.activeElement === document.querySelector('.editor .fields input')), 'arrow keys and Enter choose an item');
+    await page.close();
+  },
+
   async 'columns shrink to fit, hide and resize'() {
     const context = await browser.createBrowserContext();
     const page = await openApp({ width: 960, height: 760, context });

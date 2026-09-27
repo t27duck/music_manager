@@ -119,6 +119,7 @@ export const api = {
   distinct: (field: string) => invoke<string[]>('distinct_values', { field }),
   getArt: (id: number) => invoke<string | null>('get_art', { id }),
   imagePreview: (path: string) => invoke<string>('image_preview', { path }),
+  showInFolder: (id: number) => invoke<void>('show_in_folder', { id }),
   writeTags: (ids: number[], edits: TagEdits) => invoke<WriteResult>('write_tags', { ids, edits }),
   templateTokens: () => invoke<TokenInfo[]>('template_tokens'),
   previewReorganize: (ids: number[], template: string) => invoke<PlanItem[]>('preview_reorganize', { ids, template }),

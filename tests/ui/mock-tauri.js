@@ -59,6 +59,8 @@
             .map((id) => ({ id, path: tracks.find((t) => t.id === id).path, message: 'Permission denied (os error 13)' }));
           return { updated: args.ids.length - failed.length, failed };
         }
+        case 'show_in_folder':
+          return null;
         case 'template_tokens':
           return [{ token: 'Artist', description: 'a' }, { token: 'Title', description: 't' }];
         case 'preview_reorganize':

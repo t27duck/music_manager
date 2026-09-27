@@ -30,6 +30,9 @@ tauri = { version = "2.12.0", features = [] }
 tauri-plugin-dialog = "2.7.3"
 walkdir = "2.5.0"
 
+[target.'cfg(target_os = "linux")'.dependencies]
+dbus = "0.9.12"
+
 [build-dependencies]
 tauri-build = { version = "2.7.0", features = [] }
 

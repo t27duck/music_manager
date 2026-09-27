@@ -114,6 +114,19 @@ pub async fn get_art(state: State<'_, Arc<AppState>>, id: i64) -> CmdResult<Opti
     .await
 }
 
+/// Show a track's file in the desktop's file manager.
+#[tauri::command]
+pub async fn show_in_folder(state: State<'_, Arc<AppState>>, id: i64) -> CmdResult<()> {
+    let state = state.inner().clone();
+    blocking(move || {
+        let root = require_root(&state)?;
+        let track = state.db.lock().unwrap().get(&[id]).map_err(anyhow_err)?.pop();
+        let track = track.ok_or("that file is no longer in the library")?;
+        crate::reveal::reveal(&root.join(&track.path)).map_err(anyhow_err)
+    })
+    .await
+}
+
 fn data_url(art: &Artwork) -> String {
     format!("data:{};base64,{}", art.mime, base64::engine::general_purpose::STANDARD.encode(&art.data))
 }

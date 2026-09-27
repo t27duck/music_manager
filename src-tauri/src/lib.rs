@@ -3,6 +3,7 @@ mod config;
 pub mod db;
 pub mod player;
 pub mod reorganize;
+mod reveal;
 pub mod scanner;
 pub mod tags;
 pub mod template;
@@ -141,6 +142,7 @@ pub fn run() {
             commands::distinct_values,
             commands::get_art,
             commands::image_preview,
+            commands::show_in_folder,
             commands::write_tags,
             commands::template_tokens,
             commands::preview_reorganize,

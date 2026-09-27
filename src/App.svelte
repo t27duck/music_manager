@@ -23,7 +23,8 @@
   import PlayerBar from './lib/PlayerBar.svelte';
   import UnsavedChanges from './lib/UnsavedChanges.svelte';
   import SaveFailures from './lib/SaveFailures.svelte';
-  import { dismiss, toast, toasts } from './lib/toast.svelte';
+  import Menu, { type MenuItem } from './lib/Menu.svelte';
+  import { copyText, dismiss, toast, toasts } from './lib/toast.svelte';
 
   let config = $state<Config | null>(null);
   let tracks = $state<Track[]>([]);
@@ -131,6 +132,26 @@
       selected = new Set(ids.filter((id) => visible.has(id)));
     });
   }
+
+  let rowMenu = $state<{ id: number; x: number; y: number } | null>(null);
+  let rowMenuItems = $derived.by((): MenuItem[] => {
+    if (!rowMenu) return [];
+    const id = rowMenu.id;
+    const n = selected.size;
+    const files = `${n.toLocaleString()} file${n === 1 ? '' : 's'}`;
+    const fullPath = (t: Track) => `${config?.library_path?.replace(/\/$/, '')}/${t.path}`;
+    return [
+      { label: player.track_id === id && player.playing ? 'Pause' : 'Play', hint: 'Space', action: () => play(id, true) },
+      { label: 'Edit tags', action: () => editor?.focusFirstField() },
+      { label: `Reorganize ${files}…`, action: () => (reorganizing = [...selected]) },
+      'separator',
+      { label: 'Show in file manager', action: () => api.showInFolder(id).catch((e) => toast(errorText(e), 'error')) },
+      {
+        label: n === 1 ? 'Copy path' : `Copy ${n.toLocaleString()} paths`,
+        action: () => copyText(selectedTracks.map(fullPath).join('\n'), n === 1 ? 'Copied the path' : `Copied ${n.toLocaleString()} paths`),
+      },
+    ];
+  });
 
   function select(next: Set<number>, then?: () => void) {
     const same = next.size === selected.size && [...next].every((id) => selected.has(id));
@@ -298,6 +319,7 @@
           unsaved={failureMessages}
           onselect={select}
           onplay={play}
+          onrowmenu={(id, x, y) => (rowMenu = { id, x, y })}
         />
       </section>
       <Editor
@@ -326,6 +348,10 @@
     </footer>
   {/if}
 </div>
+
+{#if rowMenu}
+  <Menu x={rowMenu.x} y={rowMenu.y} items={rowMenuItems} label="Track" onclose={() => (rowMenu = null)} />
+{/if}
 
 {#if report && failures.size}
   <SaveFailures

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { formatDuration, type Track } from './api';
+  import Menu, { type MenuItem } from './Menu.svelte';
 
   type Sort = { field: string | null; desc: boolean };
 
@@ -12,6 +13,7 @@
     unsaved = new Map(),
     onselect,
     onplay,
+    onrowmenu,
   }: {
     tracks: Track[];
     selected: Set<number>;
@@ -24,6 +26,8 @@
     onselect: (next: Set<number>, then?: () => void) => void;
     /** `toggle` asks to pause/resume if this track is already loaded. */
     onplay: (id: number, toggle: boolean) => void;
+    /** Opens the context menu for a row (already selected) at viewport position x, y. */
+    onrowmenu: (id: number, x: number, y: number) => void;
   } = $props();
 
   const ROW_H = 28;
@@ -107,7 +111,6 @@
   function resetColumns() {
     layout = { hidden: [], widths: {} };
     saveLayout();
-    menu = null;
   }
 
   function startResize(e: PointerEvent, c: Column) {
@@ -137,29 +140,32 @@
     saveLayout();
   }
 
-  let menu = $state<{ x: number; y: number } | null>(null);
-  let menuEl = $state<HTMLDivElement>();
+  let columnMenu = $state<{ x: number; y: number } | null>(null);
+  let columnItems = $derived<MenuItem[]>([
+    ...COLUMNS.map((c) => ({
+      label: c.key === 'track' ? 'Track #' : c.label,
+      checked: !layout.hidden.includes(c.key),
+      disabled: c.key === ALWAYS_SHOWN,
+      keepOpen: true,
+      action: () => toggleColumn(c.key),
+    })),
+    'separator' as const,
+    { label: 'Reset columns', action: resetColumns },
+  ]);
 
-  function openMenu(x: number, y: number) {
-    // Keep it on screen; the menu is about 190×330.
-    menu = { x: Math.min(x, window.innerWidth - 200), y: Math.max(4, Math.min(y, window.innerHeight - 340)) };
-    requestAnimationFrame(() => menuEl?.querySelector<HTMLElement>('[role=menuitemcheckbox]:not(:disabled)')?.focus());
-  }
-
-  function closeMenu() {
-    menu = null;
-    scroller?.focus();
-  }
-
-  function menuKey(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      closeMenu();
-    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const items = [...menuEl!.querySelectorAll<HTMLElement>('button:not(:disabled)')];
-      const i = items.indexOf(document.activeElement as HTMLElement);
-      items[(i + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+  function rowMenu(e: MouseEvent, index: number) {
+    e.preventDefault();
+    const id = tracks[index].id;
+    const open = () => onrowmenu(id, e.clientX, e.clientY);
+    if (selected.has(id)) {
+      cursor = index;
+      open();
+    } else {
+      onselect(new Set([id]), () => {
+        anchor = index;
+        cursor = index;
+        open();
+      });
     }
   }
 
@@ -231,6 +237,19 @@
       onselect(new Set());
       return;
     }
+    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      e.preventDefault();
+      const index = cursor ?? tracks.findIndex((t) => selected.has(t.id));
+      if (index < 0) return;
+      scrollIntoView(index);
+      const row = scroller.querySelector<HTMLElement>(`.row[data-index="${index}"]`);
+      const box = (row ?? scroller).getBoundingClientRect();
+      const x = box.left + 40;
+      const y = row ? box.bottom : box.top + HEADER_H;
+      if (selected.has(tracks[index].id)) onrowmenu(tracks[index].id, x, y);
+      else onselect(new Set([tracks[index].id]), () => onrowmenu(tracks[index].id, x, y));
+      return;
+    }
     if (e.key === ' ') {
       e.preventDefault();
       const index = cursor ?? (selected.size === 1 ? tracks.findIndex((t) => selected.has(t.id)) : -1);
@@ -274,7 +293,7 @@
     tabindex="-1"
     oncontextmenu={(e) => {
       e.preventDefault();
-      openMenu(e.clientX, e.clientY);
+      columnMenu = { x: e.clientX, y: e.clientY };
     }}
   >
     {#each columns as c (c.key)}
@@ -303,11 +322,10 @@
       title="Choose columns"
       aria-label="Choose columns"
       aria-haspopup="menu"
-      aria-expanded={!!menu}
+      aria-expanded={!!columnMenu}
       onclick={(e) => {
         const r = e.currentTarget.getBoundingClientRect();
-        if (menu) closeMenu();
-        else openMenu(r.right - 190, r.bottom + 2);
+        columnMenu = { x: r.right - 190, y: r.bottom + 2 };
       }}>⋮</button
     >
   </div>
@@ -325,6 +343,8 @@
         style:transform="translateY({index * ROW_H}px)"
         onclick={(e) => clickRow(e, index)}
         ondblclick={() => onplay(t.id, false)}
+        oncontextmenu={(e) => rowMenu(e, index)}
+        data-index={index}
         onmousedown={(e) => e.shiftKey && e.preventDefault()}
         role="row"
         tabindex="-1"
@@ -361,26 +381,8 @@
   {/if}
 </div>
 
-{#if menu}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div
-    class="menu-backdrop"
-    onclick={closeMenu}
-    oncontextmenu={(e) => {
-      e.preventDefault();
-      closeMenu();
-    }}
-  ></div>
-  <div class="menu" role="menu" aria-label="Columns" tabindex="-1" bind:this={menuEl} style:left="{menu.x}px" style:top="{menu.y}px" onkeydown={menuKey}>
-    {#each COLUMNS as c (c.key)}
-      {@const shown = !layout.hidden.includes(c.key)}
-      <button role="menuitemcheckbox" aria-checked={shown} disabled={c.key === ALWAYS_SHOWN} onclick={() => toggleColumn(c.key)}>
-        <span class="check">{shown ? '✓' : ''}</span>{c.key === 'track' ? 'Track #' : c.label}
-      </button>
-    {/each}
-    <hr />
-    <button onclick={resetColumns}><span class="check"></span>Reset columns</button>
-  </div>
+{#if columnMenu}
+  <Menu x={columnMenu.x} y={columnMenu.y} items={columnItems} label="Columns" onclose={() => (columnMenu = null)} />
 {/if}
 
 <style>
@@ -460,48 +462,6 @@
     padding: 0;
     font-size: 15px;
     letter-spacing: 0;
-  }
-  .menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 40;
-  }
-  .menu {
-    position: fixed;
-    z-index: 41;
-    width: 190px;
-    padding: 4px;
-    display: flex;
-    flex-direction: column;
-    background: var(--navy-850);
-    border: 1px solid var(--navy-600);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
-    outline: none;
-  }
-  .menu button {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    border: none;
-    background: transparent;
-    padding: 5px 8px;
-    border-radius: 4px;
-  }
-  .menu button:hover:not(:disabled),
-  .menu button:focus-visible {
-    background: var(--navy-700);
-    outline: none;
-  }
-  .menu .check {
-    width: 18px;
-    color: var(--cerulean-light);
-  }
-  .menu hr {
-    width: 100%;
-    border: none;
-    border-top: 1px solid var(--navy-700);
-    margin: 4px 0;
   }
   .body {
     position: relative;

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import type { WriteFailure } from './api';
-  import { toast } from './toast.svelte';
+  import { copyText } from './toast.svelte';
 
   let {
     failures,
@@ -32,14 +32,9 @@
     return () => previous?.focus();
   });
 
-  async function copyList() {
+  function copyList() {
     const text = failures.map((f) => `${f.path || `(file #${f.id})`}\t${f.message}`).join('\n');
-    try {
-      await navigator.clipboard.writeText(text);
-      toast(`Copied ${plural(failures.length, 'line')}`, 'success');
-    } catch {
-      toast('Couldn’t copy to the clipboard', 'error');
-    }
+    copyText(text, `Copied ${plural(failures.length, 'line')}`);
   }
 
   function onKey(e: KeyboardEvent) {

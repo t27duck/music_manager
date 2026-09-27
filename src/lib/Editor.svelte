@@ -168,6 +168,13 @@
     return !hasErrors;
   }
 
+  let panel: HTMLElement;
+
+  /** Moves keyboard focus to the first tag field. */
+  export function focusFirstField() {
+    panel?.querySelector<HTMLElement>('.fields input')?.focus();
+  }
+
   /** Throws the edits away. */
   export function discard() {
     reset(tracks);
@@ -238,7 +245,7 @@
   </label>
 {/snippet}
 
-<aside class="editor">
+<aside class="editor" bind:this={panel}>
   {#if tracks.length === 0}
     <div class="placeholder">
       <p>Select one or more tracks to edit their tags.</p>
