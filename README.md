@@ -113,6 +113,12 @@ through WASAPI, *Show in file manager* opens Explorer, and settings and the inde
 `%APPDATA%\music-manager\`. When reorganizing on Windows, names that Windows can't hold
 (trailing dots or spaces, device names like `CON` or `COM1`) are adjusted.
 
+The workflow also produces a **portable** build: `music-manager.exe` beside a `data`
+folder. While that folder exists, settings, the index, pasted art and the WebView's storage
+are kept in it rather than in the user profile, so the whole folder can live on a USB drive.
+It needs WebView2 to be installed already, as it is on Windows 11 and current Windows 10.
+The same `data` folder rule applies to the Linux and macOS binaries.
+
 ### Installing
 
 ```sh
@@ -135,6 +141,9 @@ npm run tauri dev
 | --- | --- |
 | `~/.config/music-manager/config.json` | Library folder and saved templates |
 | `~/.local/share/music-manager/library.db` | SQLite index (safe to delete; it is rebuilt) |
+
+If a `data` folder sits beside the executable, both files go there instead (see the portable
+Windows build above).
 
 The app sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` unless you set it yourself, which avoids
 blank windows with some GPU drivers (notably NVIDIA).

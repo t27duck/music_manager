@@ -1,5 +1,7 @@
-# Unsigned x64 NSIS installer. SmartScreen warns on first run: More info → Run anyway.
-# The installer fetches WebView2 if it's missing (it ships with Windows 11 and current Windows 10).
+# Unsigned x64 NSIS installer, plus a portable folder (the exe and a data\ folder that keeps
+# settings and the index beside it). SmartScreen warns on first run: More info → Run anyway.
+# The installer fetches WebView2 if it's missing; the portable build needs it already installed
+# (it ships with Windows 11 and current Windows 10).
 name: Windows build
 
 on:
@@ -36,3 +38,19 @@ jobs:
         with:
           name: music-manager-windows-x64
           path: src-tauri/target/release/bundle/nsis/*.exe
+
+      # upload-artifact skips empty folders, so data\ gets a note explaining it.
+      - name: Assemble the portable folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force portable/data | Out-Null
+          Copy-Item src-tauri/target/release/music-manager.exe portable/
+          Set-Content portable/data/README.txt @(
+            "MusicManager keeps its settings, library index and browser storage in this folder"
+            "because it sits next to music-manager.exe. Delete the folder to use the user profile instead."
+          )
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: music-manager-windows-x64-portable
+          path: portable/

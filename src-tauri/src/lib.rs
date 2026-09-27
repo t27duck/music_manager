@@ -106,6 +106,13 @@ pub fn run() {
         std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
     }
 
+    // WebView2 keeps its storage (including the remembered column layout) under
+    // %LOCALAPPDATA% unless told otherwise; this variable overrides wry's choice.
+    #[cfg(windows)]
+    if let Some(dir) = config::portable_dir() {
+        std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", dir.join("webview"));
+    }
+
     let config = Config::load();
     let db = Db::open(&config::db_path()).expect("could not open the library database");
     if let Some(root) = &config.library_path {
