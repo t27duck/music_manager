@@ -114,6 +114,21 @@ pub async fn get_art(state: State<'_, Arc<AppState>>, id: i64) -> CmdResult<Opti
     .await
 }
 
+/// Saves pasted image bytes (the raw request body) to a file and returns its path, to be used
+/// like an image file chosen as album art.
+#[tauri::command]
+pub async fn stage_image(request: tauri::ipc::Request<'_>) -> CmdResult<String> {
+    let tauri::ipc::InvokeBody::Raw(data) = request.body() else {
+        return Err("expected image bytes".into());
+    };
+    let data = data.clone();
+    blocking(move || {
+        let path = tags::stage_image(&crate::config::staged_art_dir(), &data).map_err(anyhow_err)?;
+        Ok(path.to_string_lossy().into_owned())
+    })
+    .await
+}
+
 /// Show a track's file in the desktop's file manager.
 #[tauri::command]
 pub async fn show_in_folder(state: State<'_, Arc<AppState>>, id: i64) -> CmdResult<()> {

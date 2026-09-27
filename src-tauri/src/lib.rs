@@ -143,6 +143,7 @@ pub fn run() {
             commands::get_art,
             commands::image_preview,
             commands::show_in_folder,
+            commands::stage_image,
             commands::write_tags,
             commands::template_tokens,
             commands::preview_reorganize,

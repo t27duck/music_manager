@@ -35,7 +35,8 @@
     unregisterCallback: () => {},
     convertFileSrc: (p) => p,
     invoke: async (cmd, args) => {
-      window.__calls.push([cmd, JSON.parse(JSON.stringify(args ?? {}))]);
+      // Raw byte bodies (e.g. stage_image) are recorded by size.
+      window.__calls.push([cmd, args instanceof Uint8Array ? { bytes: args.length } : JSON.parse(JSON.stringify(args ?? {}))]);
       switch (cmd) {
         case 'get_config':
           return { library_path: '/music', templates: ['<AlbumArtist>/<Album>/<Track:2> <Title>'] };
@@ -61,6 +62,10 @@
         }
         case 'show_in_folder':
           return null;
+        case 'stage_image':
+          return '/tmp/pasted-1.png';
+        case 'image_preview':
+          return 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
         case 'template_tokens':
           return [{ token: 'Artist', description: 'a' }, { token: 'Title', description: 't' }];
         case 'preview_reorganize':

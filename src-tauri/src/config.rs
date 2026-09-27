@@ -30,6 +30,11 @@ fn config_path() -> PathBuf {
     dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join(APP_DIR).join("config.json")
 }
 
+/// Where pasted album art is kept until it's saved into files.
+pub fn staged_art_dir() -> PathBuf {
+    dirs::cache_dir().unwrap_or_else(std::env::temp_dir).join(APP_DIR).join("pasted-art")
+}
+
 pub fn db_path() -> PathBuf {
     dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join(APP_DIR).join("library.db")
 }

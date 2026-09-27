@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { open } from '@tauri-apps/plugin-dialog';
+  import { getCurrentWebview } from '@tauri-apps/api/webview';
   import { api, errorText, formatDuration, type EditField, type TagEdits, type Track, type WriteResult } from './api';
   import { toast } from './toast.svelte';
 
@@ -148,6 +149,10 @@
     else values[k] = initial[k];
   }
 
+  const IMAGE_EXT = /\.(jpe?g|png|gif|webp)$/i;
+  const NO_TRACKS = 'Select the tracks to give this album art first.';
+  const dialogOpen = () => !!document.querySelector('[aria-modal="true"]');
+
   async function chooseArt() {
     const path = await open({
       multiple: false,
@@ -155,13 +160,97 @@
       title: 'Choose album art',
       filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'JPG', 'JPEG', 'PNG'] }],
     });
-    if (typeof path !== 'string') return;
+    if (typeof path === 'string') setArtFromPath(path);
+  }
+
+  async function setArtFromPath(path: string) {
     try {
       art = { kind: 'set', path, preview: await api.imagePreview(path) };
     } catch (e) {
       toast(errorText(e), 'error');
     }
   }
+
+  async function setArtFromBytes(data: Uint8Array) {
+    try {
+      setArtFromPath(await api.stageImage(data));
+    } catch (e) {
+      toast(errorText(e), 'error');
+    }
+  }
+
+  /** A single image file path from pasted text: a path or file:// URI (as file managers copy). */
+  function imagePathFrom(text: string): string | null {
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith('#'));
+    if (lines.length !== 1) return null;
+    let path = lines[0];
+    if (path.startsWith('file://')) {
+      try {
+        path = decodeURIComponent(new URL(path).pathname);
+      } catch {
+        return null;
+      }
+    }
+    return path.startsWith('/') && IMAGE_EXT.test(path) ? path : null;
+  }
+
+  // Ctrl+V anywhere but a text field sets the album art from a copied image or image file.
+  function onPaste(e: ClipboardEvent) {
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('input, textarea, [contenteditable]') || !e.clipboardData || dialogOpen()) return;
+    const data = e.clipboardData;
+    const file =
+      [...data.files].find((f) => f.type.startsWith('image/')) ??
+      [...data.items].find((i) => i.kind === 'file' && i.type.startsWith('image/'))?.getAsFile();
+    const path = file ? null : imagePathFrom(data.getData('text/uri-list') || data.getData('text/plain'));
+    if (!file && !path) return;
+    e.preventDefault();
+    if (!tracks.length) return toast(NO_TRACKS);
+    if (file) file.arrayBuffer().then((b) => setArtFromBytes(new Uint8Array(b)));
+    else setArtFromPath(path!);
+  }
+
+  // Files dragged in from a file manager arrive through Tauri (with real paths), not as DOM
+  // drop events. Dropping one image anywhere on this panel sets it as the album art.
+  let dragPaths = $state<string[] | null>(null);
+  let dragOver = $state(false);
+  let dragIsImage = $derived(dragPaths?.length === 1 && IMAGE_EXT.test(dragPaths[0]));
+
+  function overPanel(position: { x: number; y: number }) {
+    if (dialogOpen()) return false;
+    const r = panel?.getBoundingClientRect();
+    const x = position.x / devicePixelRatio;
+    const y = position.y / devicePixelRatio;
+    return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  }
+
+  onMount(() => {
+    const unlisten = getCurrentWebview().onDragDropEvent(({ payload }) => {
+      if (payload.type === 'enter') {
+        dragPaths = payload.paths;
+        dragOver = overPanel(payload.position);
+      } else if (payload.type === 'over') {
+        dragOver = overPanel(payload.position);
+      } else if (payload.type === 'drop') {
+        const onPanel = overPanel(payload.position);
+        dragPaths = null;
+        dragOver = false;
+        if (!onPanel || dialogOpen()) return;
+        if (!tracks.length) toast(NO_TRACKS);
+        else if (payload.paths.length !== 1 || !IMAGE_EXT.test(payload.paths[0])) toast('Drop a single JPEG, PNG, GIF or WebP image.', 'error');
+        else setArtFromPath(payload.paths[0]);
+      } else {
+        dragPaths = null;
+        dragOver = false;
+      }
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  });
 
   /** Whether the edits can be saved as they stand (no invalid numbers). */
   export function canSave() {
@@ -214,7 +303,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={onKey} onpaste={onPaste} />
 
 {#snippet field(k: EditField, extraClass = '')}
   {@const def = FIELDS[k]}
@@ -245,7 +334,7 @@
   </label>
 {/snippet}
 
-<aside class="editor" bind:this={panel}>
+<aside class="editor" class:drop-target={dragOver && dragIsImage && tracks.length} bind:this={panel}>
   {#if tracks.length === 0}
     <div class="placeholder">
       <p>Select one or more tracks to edit their tags.</p>
@@ -267,15 +356,17 @@
 
     <div class="scroll">
       <section class="art">
-        <div class="art-frame" class:pending={art.kind !== 'keep'}>
-          {#if art.kind === 'set'}
+        <div class="art-frame" class:pending={art.kind !== 'keep'} title="Drop or paste an image to use it as the album art">
+          {#if dragOver && dragIsImage}
+            <span class="drop-hint">Drop to use as album art</span>
+          {:else if art.kind === 'set'}
             <img src={art.preview} alt="New album art" />
           {:else if art.kind === 'clear'}
             <span class="muted">Art will be removed</span>
           {:else if currentArt}
             <img src={currentArt} alt="Album art" />
           {:else}
-            <span class="muted">No album art</span>
+            <span class="muted">No album art<br /><small>Drop or paste an image</small></span>
           {/if}
         </div>
         <div class="art-meta">
@@ -283,7 +374,9 @@
             <span class="muted">{withArt} of {tracks.length} have art{withArt ? '; showing the first' : ''}</span>
           {/if}
           <div class="art-buttons">
-            <button onclick={chooseArt}>{art.kind === 'set' ? 'Change…' : 'Set image…'}</button>
+            <button onclick={chooseArt} title="Choose an image file (or drop or paste one onto the editor)"
+              >{art.kind === 'set' ? 'Change…' : 'Set image…'}</button
+            >
             <button class="danger" onclick={() => (art = { kind: 'clear' })} disabled={art.kind === 'clear' || (!withArt && art.kind === 'keep')}
               >Remove</button
             >
@@ -410,6 +503,20 @@
     text-align: center;
     font-size: 12px;
     padding: 4px;
+  }
+  .editor.drop-target {
+    box-shadow: inset 0 0 0 2px var(--cerulean);
+  }
+  .drop-target .art-frame {
+    border: 2px dashed var(--cerulean);
+    background: var(--cerulean-wash);
+  }
+  .drop-hint {
+    color: var(--cerulean-light);
+    font-weight: 600;
+  }
+  .art-frame small {
+    color: var(--text-faint);
   }
   .art-frame.pending {
     border-color: var(--cerulean);

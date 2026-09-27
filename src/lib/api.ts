@@ -120,6 +120,8 @@ export const api = {
   getArt: (id: number) => invoke<string | null>('get_art', { id }),
   imagePreview: (path: string) => invoke<string>('image_preview', { path }),
   showInFolder: (id: number) => invoke<void>('show_in_folder', { id }),
+  /** Saves pasted image bytes to a temporary file; returns its path. */
+  stageImage: (data: Uint8Array) => invoke<string>('stage_image', data),
   writeTags: (ids: number[], edits: TagEdits) => invoke<WriteResult>('write_tags', { ids, edits }),
   templateTokens: () => invoke<TokenInfo[]>('template_tokens'),
   previewReorganize: (ids: number[], template: string) => invoke<PlanItem[]>('preview_reorganize', { ids, template }),

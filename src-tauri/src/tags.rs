@@ -4,7 +4,7 @@
 //! cannot represent the full v2 tag and would otherwise go stale.
 
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use id3::frame::{Comment, Picture, PictureType, Timestamp};
@@ -100,6 +100,27 @@ impl Artwork {
         };
         Ok(Self { mime: mime.to_string(), data })
     }
+}
+
+/// Saves image bytes (e.g. pasted from the clipboard) as a file in `dir` so they can be used
+/// like a chosen image file. Earlier staged images in `dir` are removed; only the latest one is
+/// ever pending.
+pub fn stage_image(dir: &Path, data: &[u8]) -> Result<PathBuf> {
+    let ext = match sniff_image_mime(data) {
+        Some("image/jpeg") => "jpg",
+        Some("image/png") => "png",
+        Some("image/gif") => "gif",
+        Some("image/webp") => "webp",
+        _ => bail!("the pasted image isn't a JPEG, PNG, GIF or WebP"),
+    };
+    std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    for entry in std::fs::read_dir(dir)?.flatten() {
+        let _ = std::fs::remove_file(entry.path());
+    }
+    let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis();
+    let path = dir.join(format!("pasted-{stamp}.{ext}"));
+    std::fs::write(&path, data).with_context(|| format!("writing {}", path.display()))?;
+    Ok(path)
 }
 
 pub fn sniff_image_mime(data: &[u8]) -> Option<&'static str> {
@@ -402,5 +423,20 @@ pub(crate) mod tests {
         assert_eq!(e.title, Some(FieldEdit::Set("X".into())));
         assert_eq!(e.year, Some(FieldEdit::Clear));
         assert!(e.artist.is_none());
+    }
+
+    #[test]
+    fn stage_image_keeps_only_the_latest_and_rejects_non_images() {
+        let dir = tempfile::tempdir().unwrap();
+        let staged = dir.path().join("staged");
+        let first = stage_image(&staged, b"\x89PNG\r\n\x1a\nrest").unwrap();
+        assert_eq!(first.extension().unwrap(), "png");
+        std::thread::sleep(std::time::Duration::from_millis(2));
+        let second = stage_image(&staged, &[0xFF, 0xD8, 0xFF, 0xE0, 1, 2]).unwrap();
+        assert_eq!(second.extension().unwrap(), "jpg");
+        assert!(!first.exists());
+        assert_eq!(Artwork::load(&second).unwrap().mime, "image/jpeg");
+        assert!(stage_image(&staged, b"BM not supported").is_err());
+        assert!(second.exists(), "a rejected paste leaves the pending image alone");
     }
 }

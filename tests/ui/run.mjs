@@ -350,6 +350,77 @@ const tests = {
     await page.close();
   },
 
+  async 'album art: drop and paste'() {
+    const page = await openApp();
+    await (await page.$$('.row'))[0].click();
+    const box = await (await page.$('.editor')).boundingBox();
+    const scale = await page.evaluate(() => devicePixelRatio);
+    const on = { x: (box.x + box.width / 2) * scale, y: (box.y + 200) * scale };
+    const off = { x: 100 * scale, y: 300 * scale };
+    const drag = (event, payload) => page.evaluate((e, p) => window.__emit(e, p), `tauri://drag-${event}`, payload);
+    const previews = () => callsOf(page, 'image_preview');
+
+    await drag('enter', { paths: ['/pics/cover.jpg'], position: off });
+    await sleep(50);
+    check(!(await page.$('.editor.drop-target')), 'no highlight while dragging over the table');
+    await drag('over', { position: on });
+    await sleep(50);
+    check(!!(await page.$('.editor.drop-target .drop-hint')), 'editor highlights when an image is over it');
+    await shot(page, 'art-drop');
+    await drag('drop', { paths: ['/pics/cover.jpg'], position: on });
+    await sleep(150);
+    check(!(await page.$('.editor.drop-target')), 'highlight clears on drop');
+    check(JSON.stringify(await previews()) === '[{"path":"/pics/cover.jpg"}]', 'dropped image is previewed');
+    check(!!(await page.$('.art-frame.pending img')), 'art shows as pending');
+    await page.click('.editor footer button.primary');
+    await sleep(300);
+    const [w] = await callsOf(page, 'write_tags');
+    check(JSON.stringify(w.edits) === '{"art":{"op":"set","value":"/pics/cover.jpg"}}', `save writes the art: ${JSON.stringify(w.edits)}`);
+
+    await drag('enter', { paths: ['/pics/a.jpg', '/pics/b.jpg'], position: on });
+    await drag('drop', { paths: ['/pics/a.jpg', '/pics/b.jpg'], position: on });
+    await sleep(100);
+    check(await page.$$eval('.toast.error', (ts) => ts.some((t) => t.textContent.includes('single'))), 'dropping two files explains why not');
+    await drag('enter', { paths: ['/pics/c.jpg'], position: off });
+    await drag('drop', { paths: ['/pics/c.jpg'], position: off });
+    await sleep(100);
+    check((await previews()).length === 1, 'dropping outside the editor does nothing');
+
+    const paste = (setup) =>
+      page.evaluate(async (setupSrc) => {
+        const dt = new DataTransfer();
+        await new Function('dt', setupSrc)(dt);
+        (document.activeElement ?? document.body).dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+      }, setup);
+    await (await page.$$('.row'))[1].click();
+    await paste(`dt.items.add(new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3])], 'image.png', { type: 'image/png' }));`);
+    await sleep(200);
+    check(JSON.stringify((await callsOf(page, 'stage_image')).at(-1)) === '{"bytes":7}', 'a pasted image is staged');
+    check((await previews()).at(-1).path === '/tmp/pasted-1.png', 'and previewed');
+
+    await (await page.$$('.row'))[2].click();
+    await page.waitForSelector('[role=alertdialog]');
+    const n = (await previews()).length;
+    await paste(`dt.items.add(new File([new Uint8Array([0x89, 0x50])], 'x.png', { type: 'image/png' }));`);
+    await sleep(100);
+    check((await previews()).length === n, 'pasting does nothing while a dialog is open');
+    await page.evaluate(() => [...document.querySelectorAll('[role=alertdialog] button')].find((b) => b.textContent.includes('Discard')).click());
+    await sleep(100);
+    await paste(`dt.setData('text/plain', 'file:///home/me/My%20Cover.PNG');`);
+    await sleep(150);
+    check((await previews()).at(-1).path === '/home/me/My Cover.PNG', 'a pasted image file URI is used');
+
+    const before = (await previews()).length;
+    await (await fieldInput(page, 'Title')).focus();
+    await paste(`dt.items.add(new File([new Uint8Array([0x89, 0x50])], 'x.png', { type: 'image/png' }));`);
+    await paste(`dt.setData('text/plain', 'not an image');`);
+    await (await page.$$('.row'))[2].click();
+    await paste(`dt.setData('text/plain', '/home/me/notes.txt');`);
+    await sleep(150);
+    check((await previews()).length === before, 'pastes into text fields, and non-image text, are left alone');
+    await page.close();
+  },
+
   async 'columns shrink to fit, hide and resize'() {
     const context = await browser.createBrowserContext();
     const page = await openApp({ width: 960, height: 760, context });

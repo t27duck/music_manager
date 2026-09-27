@@ -20,7 +20,8 @@ startup plus live file watching while the app runs.
   Selecting other files, switching library or closing the window with unsaved edits asks
   whether to save or discard them first.
 - **Album art**: set (JPEG/PNG/GIF/WebP) or remove the embedded front cover on one or many
-  files.
+  files. Besides *Set image…*, you can drop an image file onto the editor, or press Ctrl+V
+  (outside a text field) to paste a copied image or image file.
 - **Listen** to a file to check it is what its tags say: double-click a row, press Space,
   or use *Listen* in the editor. A player bar with seek and volume appears at the bottom.
   Playback is decoded in-process (no GStreamer plugins needed) and outputs through ALSA,
