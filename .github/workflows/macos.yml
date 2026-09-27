@@ -1,0 +1,39 @@
+# Unbundled Apple Silicon build. Not signed or notarized: after downloading, run
+#   chmod +x music-manager && xattr -d com.apple.quarantine music-manager
+name: macOS build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: macos-15 # arm64
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # Builds the frontend into build/, which the Rust tests need for Tauri's context.
+      - run: npm run tauri build -- --no-bundle
+
+      # APFS is case-insensitive, unlike the Linux build hosts; run the tests there too.
+      - run: cargo test
+        working-directory: src-tauri
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: music-manager-macos-arm64
+          path: src-tauri/target/release/music-manager

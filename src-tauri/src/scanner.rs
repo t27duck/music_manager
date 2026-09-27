@@ -162,6 +162,9 @@ mod tests {
         fake_mp3(&root.join("A/B"), "two.MP3");
         fake_mp3(&root.join(".hidden"), "x.mp3");
         std::fs::write(root.join("A/cover.png"), b"x").unwrap();
+        // macOS metadata: AppleDouble sidecars on non-APFS volumes, and Finder state.
+        std::fs::write(root.join("A/._one.mp3"), b"x").unwrap();
+        std::fs::write(root.join("A/.DS_Store"), b"x").unwrap();
 
         let db = Mutex::new(Db::open_in_memory().unwrap());
         let s = full_scan(&db, root, |_, _| {}).unwrap();

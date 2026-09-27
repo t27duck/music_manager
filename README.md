@@ -78,6 +78,21 @@ make check     # svelte-check, cargo check and clippy
 ```
 
 `make arch` packages the **committed** tree (`git archive HEAD`), so commit first.
+
+### macOS (Apple Silicon, unofficial)
+
+There's no macOS package, but the app runs as a plain binary (audio goes through CoreAudio).
+Either build it on the Mac with Rust, Node and the Xcode command line tools installed:
+
+```sh
+npm ci
+npm run tauri build -- --no-bundle
+./src-tauri/target/release/music-manager
+```
+
+or run the *macOS build* GitHub Actions workflow and download its artifact, which is
+unsigned: `chmod +x music-manager && xattr -d com.apple.quarantine music-manager`.
+Settings and the index live in `~/Library/Application Support/music-manager/`.
 The `.deb` targets Ubuntu 24.04 and newer.
 
 ### Installing

@@ -13,6 +13,7 @@ use crate::template;
 
 /// Files that don't keep a folder alive on their own. When every MP3 has moved out of a
 /// folder, these follow them if they all went to the same place, otherwise they're deleted.
+/// macOS metadata (`.DS_Store`, `._*` AppleDouble files) never follows: it describes the old folder.
 const LEFTOVER_EXTS: [&str; 7] = ["jpg", "jpeg", "png", "gif", "bmp", "webp", "ini"];
 const LEFTOVER_NAMES: [&str; 3] = ["thumbs.db", ".ds_store", ".directory"];
 
@@ -91,10 +92,15 @@ pub fn plan(root: &Path, tracks: &[Track], template: &str) -> Vec<PlanItem> {
     items
 }
 
+fn is_mac_metadata(path: &Path) -> bool {
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+    name.starts_with("._") || name.eq_ignore_ascii_case(".ds_store")
+}
+
 fn is_leftover(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default().to_lowercase();
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or_default().to_lowercase();
-    LEFTOVER_NAMES.contains(&name.as_str()) || LEFTOVER_EXTS.contains(&ext.as_str())
+    is_mac_metadata(path) || LEFTOVER_NAMES.contains(&name.as_str()) || LEFTOVER_EXTS.contains(&ext.as_str())
 }
 
 fn move_file(from: &Path, to: &Path) -> Result<()> {
@@ -129,7 +135,8 @@ fn prune(root: &Path, dir: &Path, follow: Option<&Path>) -> usize {
             break;
         }
         for p in &entries {
-            let target = follow.filter(|_| first).map(|f| f.join(p.file_name().unwrap_or_default()));
+            let target =
+                follow.filter(|_| first && !is_mac_metadata(p)).map(|f| f.join(p.file_name().unwrap_or_default()));
             match target {
                 Some(t) if !t.exists() => {
                     if move_file(p, &t).is_err() {
@@ -227,6 +234,8 @@ mod tests {
         tag(&fake_mp3(&root.join("messy/sub"), "b.mp3"), "Queen", "Jazz", "Fat Bottomed Girls", 2);
         tag(&fake_mp3(&root.join("messy"), "c.mp3"), "Queen", "Jazz", "Mustapha", 1);
         std::fs::write(root.join("messy/sub/cover.png"), b"img").unwrap();
+        std::fs::write(root.join("messy/sub/._a.mp3"), b"appledouble").unwrap();
+        std::fs::write(root.join("messy/sub/.DS_Store"), b"finder").unwrap();
         let db = Mutex::new(Db::open_in_memory().unwrap());
         full_scan(&db, root, |_, _| {}).unwrap();
         (dir, db)
@@ -256,6 +265,7 @@ mod tests {
         assert_eq!((r.moved, r.failed.len(), r.removed_dirs), (2, 0, 1));
         assert!(root.join("Queen/Jazz/01 Mustapha.mp3").exists());
         assert!(root.join("Queen/Jazz/cover.png").exists(), "cover follows the album");
+        assert!(!root.join("Queen/Jazz/._a.mp3").exists() && !root.join("Queen/Jazz/.DS_Store").exists());
         assert!(!root.join("messy/sub").exists());
         assert!(root.join("messy/c.mp3").exists(), "folder with remaining music is kept");
 
