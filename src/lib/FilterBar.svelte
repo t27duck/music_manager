@@ -1,5 +1,6 @@
 <script lang="ts">
   import { FILTER_FIELDS, OPS, fieldKind, type FilterRow } from './api';
+  import Menu, { type MenuItem } from './Menu.svelte';
 
   let { search = $bindable(), filters = $bindable() }: { search: string; filters: FilterRow[] } = $props();
 
@@ -8,6 +9,27 @@
   function addFilter() {
     filters = [...filters, { field: 'artist', op: 'contains', value: '' }];
   }
+
+  // Ready-made filters for tidying the library. Choosing one adds it to the current filters.
+  const PROBLEMS: { label: string; filter: FilterRow }[] = [
+    { label: 'Tag errors', filter: { field: 'has_error', op: 'yes', value: '' } },
+    { label: 'No album art', filter: { field: 'has_art', op: 'no', value: '' } },
+    { label: 'No title', filter: { field: 'title', op: 'empty', value: '' } },
+    { label: 'No artist', filter: { field: 'artist', op: 'empty', value: '' } },
+    { label: 'No album', filter: { field: 'album', op: 'empty', value: '' } },
+    { label: 'No track number', filter: { field: 'track', op: 'empty', value: '' } },
+    { label: 'No year', filter: { field: 'year', op: 'empty', value: '' } },
+  ];
+  const same = (a: FilterRow, b: FilterRow) => a.field === b.field && a.op === b.op;
+
+  let problemsMenu = $state<{ x: number; y: number } | null>(null);
+  let problemItems = $derived<MenuItem[]>(
+    PROBLEMS.map((p) => ({
+      label: p.label,
+      disabled: filters.some((f) => same(f, p.filter)),
+      action: () => (filters = [...filters.filter((f) => !(f.field === p.filter.field && !f.value.trim())), { ...p.filter }]),
+    })),
+  );
 
   function removeFilter(i: number) {
     filters = filters.filter((_, j) => j !== i);
@@ -47,6 +69,15 @@
     />
   </div>
   <button onclick={addFilter}>+ Filter</button>
+  <button
+    aria-haspopup="menu"
+    aria-expanded={!!problemsMenu}
+    title="Show tracks with tag errors, no album art or missing tags"
+    onclick={(e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      problemsMenu = { x: r.left, y: r.bottom + 4 };
+    }}>Find problems ▾</button
+  >
   {#if filters.length || search}
     <button
       class="ghost"
@@ -57,6 +88,10 @@
     >
   {/if}
 </div>
+
+{#if problemsMenu}
+  <Menu x={problemsMenu.x} y={problemsMenu.y} items={problemItems} label="Find problems" onclose={() => (problemsMenu = null)} />
+{/if}
 
 {#if filters.length}
   <div class="filters">

@@ -16,7 +16,8 @@
 
   --text: #e4edf8;
   --text-muted: #8da4c4;
-  --text-faint: #5c7699;
+  /* At least 4.5:1 on the navy surfaces it's used on. */
+  --text-faint: #7890b3;
   --danger: #ef6b73;
   --warning: #f2b84b;
   --success: #4fcf9a;
@@ -63,6 +64,10 @@ button {
 button:hover:not(:disabled) {
   background: var(--navy-700);
   border-color: var(--cerulean);
+}
+button:focus-visible {
+  outline: 2px solid var(--cerulean-light);
+  outline-offset: 1px;
 }
 button:disabled {
   opacity: 0.45;

@@ -298,7 +298,9 @@
 
   function placeholder(k: EditField) {
     if (cleared[k]) return 'will be cleared';
-    if (mixed[k]) return multi ? '(multiple values — leave blank to keep)' : '';
+    // The header already says blank fields are left unchanged; keep this short enough for the
+    // narrow number fields.
+    if (mixed[k]) return multi ? (FIELDS[k].kind === 'number' ? 'Mixed' : 'Mixed values') : '';
     return '';
   }
 </script>

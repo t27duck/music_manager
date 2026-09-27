@@ -152,6 +152,7 @@ export const FILTER_FIELDS: { key: string; label: string; kind: FieldKind }[] = 
   { key: 'composer', label: 'Composer', kind: 'text' },
   { key: 'comment', label: 'Comment', kind: 'text' },
   { key: 'has_art', label: 'Has Album Art', kind: 'bool' },
+  { key: 'has_error', label: 'Has Tag Error', kind: 'bool' },
   { key: 'bitrate', label: 'Bitrate (kbps)', kind: 'number' },
   { key: 'duration', label: 'Duration (sec)', kind: 'number' },
   { key: 'path', label: 'File Path', kind: 'text' },

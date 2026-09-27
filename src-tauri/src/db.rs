@@ -154,6 +154,7 @@ fn column(field: &str) -> Option<(&'static str, Kind)> {
         "bitrate" => ("bitrate", Number),
         "duration" => ("duration_ms / 1000", Number),
         "has_art" => ("has_art", Bool),
+        "has_error" => ("(error IS NOT NULL AND error <> '')", Bool),
         _ => return None,
     })
 }
@@ -523,6 +524,17 @@ mod tests {
         // A half-typed filter is ignored.
         assert_eq!(paths(&db, q(vec![f("artist", "contains", " ")])).len(), 3);
         assert!(db.query(&q(vec![f("bogus", "contains", "x")])).is_err());
+    }
+
+    #[test]
+    fn has_error_filter() {
+        let mut db = db();
+        let broken =
+            ScannedFile { rel_path: "Bad/d.mp3".into(), mtime: 1, size: 2, tags: Err("bad frame".into()), audio: None };
+        db.upsert_many(&[broken]).unwrap();
+        let q = |op: &str| Query { filters: vec![f("has_error", op, "")], ..Default::default() };
+        assert_eq!(paths(&db, q("yes")), vec!["Bad/d.mp3"]);
+        assert_eq!(paths(&db, q("no")).len(), 3);
     }
 
     #[test]

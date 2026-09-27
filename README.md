@@ -12,6 +12,9 @@ startup plus live file watching while the app runs.
   field filters (title, artist, album artist, album, genre, year, track/disc numbers,
   composer, comment, has album art, bitrate, duration, file path, folder, file name) with
   operators like *contains*, *is*, *starts with*, *is empty*, `>`, `≤`, …
+  *Find problems* adds a ready-made filter for tag errors, missing album art or missing
+  title, artist, album, track number or year. In a row's right-click menu, *Select whole
+  album* and *Select whole folder* show and select every track in that album or folder.
   Right-click the column header (or use ⋮) to show or hide columns; drag a column's edge to
   resize it and double-click the edge to let it fit the window again.
 - **Edit tags** on one file or many. In bulk editing, a blank field is skipped; use the

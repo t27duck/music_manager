@@ -14,9 +14,9 @@
     ? Array.from({ length: count }, (_, i) =>
         mk(i + 1, { dir: `D${i % 300}`, filename: `${i}.mp3`, title: `T${i}`, artist: `A${i % 40}`, album: `Al${i % 300}`, track: i % 15 }))
     : [
-        mk(1, { dir: 'X', filename: '1.mp3', title: 'One', artist: 'Alpha', album: 'Same', year: 2001, track: 1, has_art: true }),
-        mk(2, { dir: 'X', filename: '2.mp3', title: 'Two', artist: 'Beta', album: 'Same', year: 2001, track: 2, composer: 'C' }),
-        mk(3, { dir: 'Y', filename: '3.mp3', title: 'Three', artist: 'Gamma', album: 'Same', year: 2001, track: 3 }),
+        mk(1, { dir: 'X', filename: '1.mp3', title: 'One', artist: 'Alpha', album_artist: 'Various', album: 'Same', year: 2001, track: 1, has_art: true }),
+        mk(2, { dir: 'X', filename: '2.mp3', title: 'Two', artist: 'Beta', album_artist: 'Various', album: 'Same', year: 2001, track: 2, composer: 'C' }),
+        mk(3, { dir: 'Y', filename: '3.mp3', title: 'Three', artist: 'Gamma', album: 'Same', year: 2001, track: 3, error: 'bad frame' }),
       ];
 
   window.__calls = [];
@@ -43,8 +43,21 @@
         case 'status':
           return { library_path: '/music', scanning: false, count: tracks.length };
         case 'query_tracks': {
+          // Search plus the filter ops the tests use; anything else matches everything.
           const q = args.query.search.toLowerCase();
-          return q ? tracks.filter((t) => [t.title, t.artist, t.album, t.path].some((v) => v?.toLowerCase().includes(q))) : tracks;
+          const value = (t, field) => (field === 'has_error' ? !!t.error : t[field]);
+          const test = (t, { field, op, value: v }) => {
+            const x = value(t, field);
+            if (op === 'equals') return !v.trim() || String(x ?? '').toLowerCase() === v.trim().toLowerCase();
+            if (op === 'empty') return x == null || x === '';
+            if (op === 'yes' || op === 'no') return !!x === (op === 'yes');
+            return true;
+          };
+          return tracks.filter(
+            (t) =>
+              (!q || [t.title, t.artist, t.album, t.path].some((v) => v?.toLowerCase().includes(q))) &&
+              args.query.filters.every((f) => test(t, f)),
+          );
         }
         case 'get_tracks':
           return tracks.filter((t) => args.ids.includes(t.id));

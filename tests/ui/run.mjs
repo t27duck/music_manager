@@ -106,7 +106,7 @@ const tests = {
     await page.keyboard.up('Shift');
     await page.waitForFunction(() => document.querySelector('.editor h2')?.textContent.includes('3 files'));
     const placeholder = await (await fieldInput(page, 'Artist')).evaluate((el) => el.placeholder);
-    check(placeholder.includes('multiple'), `differing values show placeholder: ${placeholder}`);
+    check(placeholder === 'Mixed values', `differing values show placeholder: ${placeholder}`);
     await setField(page, 'Album', '');
     await setField(page, 'Genre', 'Rock');
     await page.evaluate(() =>
@@ -136,7 +136,7 @@ const tests = {
     await page.keyboard.down('Control');
     await page.keyboard.press('a');
     await page.keyboard.up('Control');
-    await page.click('.top button.primary');
+    await page.evaluate(() => [...document.querySelectorAll('.top button')].find((b) => b.textContent.includes('Reorganize')).click());
     await page.waitForSelector('.dialog .item');
     await sleep(400);
     await shot(page, 'reorganize');
@@ -308,7 +308,7 @@ const tests = {
     await shot(page, 'row-menu');
     check(JSON.stringify(await rowTitles(page)) === '["Two"]', 'right-click selects the row');
     const labels = await menuLabels();
-    check(JSON.stringify(labels) === JSON.stringify(['Play', 'Edit tags', 'Reorganize 1 file…', 'Show in file manager', 'Copy path']), `items: ${labels}`);
+    check(JSON.stringify(labels) === JSON.stringify(['Play', 'Edit tags', 'Reorganize 1 file…', 'Select whole album', 'Select whole folder', 'Show in file manager', 'Copy path']), `items: ${labels}`);
     check(await page.evaluate(() => document.activeElement.closest('.menu') !== null), 'menu takes focus');
     await page.keyboard.press('Escape');
     check(!(await page.$('.menu')), 'Esc closes it');
@@ -418,6 +418,88 @@ const tests = {
     await paste(`dt.setData('text/plain', '/home/me/notes.txt');`);
     await sleep(150);
     check((await previews()).length === before, 'pastes into text fields, and non-image text, are left alone');
+    await page.close();
+  },
+
+  async 'find problems adds ready-made filters'() {
+    const page = await openApp();
+    const openProblems = async () => {
+      await page.evaluate(() => [...document.querySelectorAll('.bar button')].find((b) => b.textContent.startsWith('Find problems')).click());
+      await page.waitForSelector('.menu');
+    };
+    const choose = (label) => page.evaluate((l) => [...document.querySelectorAll('.menu button')].find((b) => b.textContent.trim() === l).click(), label);
+    const shownTitles = () => page.$$eval('.row', (rs) => rs.map((r) => r.children[1].textContent.trim()));
+
+    await openProblems();
+    await shot(page, 'find-problems');
+    await choose('Tag errors');
+    await sleep(400);
+    check(JSON.stringify((await callsOf(page, 'query_tracks')).at(-1).query.filters) === '[{"field":"has_error","op":"yes","value":""}]', 'adds a Has Tag Error filter');
+    check(JSON.stringify(await shownTitles()) === '["Three"]', 'shows only the broken file');
+    await openProblems();
+    check(await page.$$eval('.menu button', (bs) => bs.find((b) => b.textContent.trim() === 'Tag errors').disabled), 'an active problem filter is disabled in the menu');
+    await choose('No album art');
+    await sleep(400);
+    check((await page.$$('.filter')).length === 2, 'problem filters combine');
+    await page.close();
+  },
+
+  async 'select whole album or folder'() {
+    const page = await openApp();
+    const shownTitles = () => page.$$eval('.row', (rs) => rs.map((r) => r.children[1].textContent.trim()));
+    const fromMenu = async (row, label) => {
+      await (await page.$$('.row'))[row].click({ button: 'right' });
+      await page.waitForSelector('.menu');
+      await page.evaluate((l) => [...document.querySelectorAll('.menu button')].find((b) => b.textContent.trim() === l).click(), label);
+      await sleep(400);
+    };
+    await page.type('.search input', 'Alpha');
+    await page.waitForFunction(() => document.querySelectorAll('.row').length === 1);
+
+    await fromMenu(0, 'Select whole album');
+    check((await page.$eval('.search input', (i) => i.value)) === '', 'clears the search');
+    const filters = (await callsOf(page, 'query_tracks')).at(-1).query.filters;
+    check(
+      JSON.stringify(filters) === JSON.stringify([{ field: 'album', op: 'equals', value: 'Same' }, { field: 'album_artist', op: 'equals', value: 'Various' }]),
+      `filters on album and album artist: ${JSON.stringify(filters)}`,
+    );
+    check(JSON.stringify(await rowTitles(page)) === '["One","Two"]', 'selects every track on the album');
+    check(await page.$eval('.editor h2', (h) => h.textContent.includes('2 files')), 'editor edits the album');
+
+    await page.click('.bar .ghost'); // Clear all
+    await page.waitForFunction(() => document.querySelectorAll('.row').length === 3);
+    await fromMenu(2, 'Select whole album');
+    const byArtist = (await callsOf(page, 'query_tracks')).at(-1).query.filters[1];
+    check(JSON.stringify(byArtist) === '{"field":"artist","op":"equals","value":"Gamma"}', 'without an album artist, uses the artist');
+
+    await page.click('.bar .ghost');
+    await page.waitForFunction(() => document.querySelectorAll('.row').length === 3);
+    await fromMenu(1, 'Select whole folder');
+    check(JSON.stringify(await shownTitles()) === '["One","Two"]' && (await rowTitles(page)).length === 2, 'selects the folder');
+    await page.close();
+  },
+
+  async 'empty table explains itself'() {
+    const page = await openApp();
+    await page.type('.search input', 'zzz');
+    await page.waitForFunction(() => !document.querySelector('.row'));
+    await sleep(100);
+    check((await page.$eval('.empty p', (p) => p.textContent)) === 'No tracks match the search.', 'names the search');
+    await page.click('.bar button'); // + Filter
+    await page.type('.filter .value', 'x');
+    await sleep(400);
+    await shot(page, 'empty-filtered');
+    check((await page.$eval('.empty p', (p) => p.textContent)) === 'No tracks match the search and filter.', 'names search and filter');
+    await page.click('.empty button');
+    await page.waitForSelector('.row');
+    check((await page.$eval('.search input', (i) => i.value)) === '' && !(await page.$('.filter')), 'Clear button clears both');
+    check((await page.$eval('.top', (t) => [...t.querySelectorAll('button')].map((b) => b.textContent.trim()).at(-1))) === 'Reorganize…', 'Reorganize is plain when nothing is selected');
+    await (await page.$$('.row'))[0].click();
+    const reorg = await page.$eval('.top', (t) => {
+      const b = [...t.querySelectorAll('button')].find((b) => b.textContent.includes('Reorganize'));
+      return { label: b.textContent.trim(), primary: b.classList.contains('primary') };
+    });
+    check(reorg.label === 'Reorganize 1 file…' && !reorg.primary, `Reorganize names the count and isn't primary: ${JSON.stringify(reorg)}`);
     await page.close();
   },
 

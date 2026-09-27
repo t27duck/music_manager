@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { formatDuration, type Track } from './api';
   import Menu, { type MenuItem } from './Menu.svelte';
 
@@ -14,6 +15,7 @@
     onselect,
     onplay,
     onrowmenu,
+    empty,
   }: {
     tracks: Track[];
     selected: Set<number>;
@@ -28,6 +30,8 @@
     onplay: (id: number, toggle: boolean) => void;
     /** Opens the context menu for a row (already selected) at viewport position x, y. */
     onrowmenu: (id: number, x: number, y: number) => void;
+    /** What to show when there are no rows. */
+    empty?: Snippet;
   } = $props();
 
   const ROW_H = 28;
@@ -377,7 +381,9 @@
     {/each}
   </div>
   {#if !tracks.length}
-    <div class="empty">No tracks match.</div>
+    <div class="empty">
+      {#if empty}{@render empty()}{:else}No tracks match.{/if}
+    </div>
   {/if}
 </div>
 
@@ -392,6 +398,10 @@
     outline: none;
     position: relative;
     background: var(--navy-950);
+  }
+  /* Keyboard focus on the table with no row to mark it. */
+  .scroller:focus-visible:not(:has(.row.cursor)) {
+    box-shadow: inset 0 0 0 2px var(--cerulean);
   }
   .header,
   .row {
@@ -544,5 +554,8 @@
     width: 100%;
     text-align: center;
     color: var(--text-muted);
+  }
+  .empty :global(p) {
+    margin: 0 0 12px;
   }
 </style>

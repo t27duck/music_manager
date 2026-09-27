@@ -133,6 +133,32 @@
     });
   }
 
+  /** Shows just the tracks matching `only` (replacing search and filters) and selects them all. */
+  function showAndSelect(only: FilterRow[]) {
+    guard(async () => {
+      search = '';
+      filters = only;
+      await refresh();
+      selected = new Set(tracks.map((t) => t.id));
+    });
+  }
+
+  // An album is its name plus the album artist, or the track artist when there's none, so
+  // same-named albums ("Greatest Hits") by different artists stay apart.
+  function albumFilters(t: Track): FilterRow[] {
+    const by = t.album_artist
+      ? { field: 'album_artist', op: 'equals', value: t.album_artist }
+      : t.artist
+        ? { field: 'artist', op: 'equals', value: t.artist }
+        : { field: 'album_artist', op: 'empty', value: '' };
+    return [{ field: 'album', op: 'equals', value: t.album ?? '' }, by];
+  }
+
+  // "search", "filter(s)" or "search and filters": what's hiding tracks, for the empty table.
+  let narrowedBy = $derived(
+    [search.trim() && 'search', filters.length && (filters.length === 1 ? 'filter' : 'filters')].filter(Boolean).join(' and '),
+  );
+
   let rowMenu = $state<{ id: number; x: number; y: number } | null>(null);
   let rowMenuItems = $derived.by((): MenuItem[] => {
     if (!rowMenu) return [];
@@ -140,10 +166,18 @@
     const n = selected.size;
     const files = `${n.toLocaleString()} file${n === 1 ? '' : 's'}`;
     const fullPath = (t: Track) => `${config?.library_path?.replace(/\/$/, '')}/${t.path}`;
+    const clicked = tracks.find((t) => t.id === id) ?? selectedTracks.find((t) => t.id === id);
     return [
       { label: player.track_id === id && player.playing ? 'Pause' : 'Play', hint: 'Space', action: () => play(id, true) },
       { label: 'Edit tags', action: () => editor?.focusFirstField() },
       { label: `Reorganize ${files}…`, action: () => (reorganizing = [...selected]) },
+      'separator',
+      { label: 'Select whole album', disabled: !clicked?.album, action: () => clicked && showAndSelect(albumFilters(clicked)) },
+      {
+        label: 'Select whole folder',
+        // Files at the top of the library have no folder; "is" with no value would match anything.
+        action: () => clicked && showAndSelect([{ field: 'dir', op: clicked.dir ? 'equals' : 'empty', value: clicked.dir }]),
+      },
       'separator',
       { label: 'Show in file manager', action: () => api.showInFolder(id).catch((e) => toast(errorText(e), 'error')) },
       {
@@ -291,8 +325,12 @@
         <span class="muted">Scanning…</span>
       {/if}
       <button onclick={() => api.rescan()} disabled={scanning} title="Re-read changed files from disk">Rescan</button>
-      <button class="primary" disabled={!selected.size} onclick={() => (reorganizing = [...selected])}>
-        Reorganize{selected.size ? ` ${selected.size}` : ''}…
+      <button
+        disabled={!selected.size}
+        title="Move and rename the selected files using a path template"
+        onclick={() => (reorganizing = [...selected])}
+      >
+        Reorganize{selected.size ? ` ${selected.size.toLocaleString()} file${selected.size === 1 ? '' : 's'}` : ''}…
       </button>
     {/if}
   </header>
@@ -320,7 +358,26 @@
           onselect={select}
           onplay={play}
           onrowmenu={(id, x, y) => (rowMenu = { id, x, y })}
-        />
+        >
+          {#snippet empty()}
+            {#if narrowedBy}
+              <p>No tracks match the {narrowedBy}.</p>
+              <button
+                onclick={() => {
+                  search = '';
+                  filters = [];
+                }}>Clear {narrowedBy}</button
+              >
+            {:else if scanning}
+              <p>Reading your library…</p>
+            {:else if libraryCount === 0}
+              <p>No MP3 files found in {config?.library_path}.</p>
+              <button onclick={chooseLibrary}>Choose another folder…</button>
+            {:else}
+              <p>No tracks to show.</p>
+            {/if}
+          {/snippet}
+        </TrackTable>
       </section>
       <Editor
         bind:this={editor}
