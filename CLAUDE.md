@@ -49,4 +49,7 @@ step with `src/lib/api.ts`.
 - Anything touching files takes `AppState::op_lock` so the watcher can't race it. Drop the
   watcher *before* taking that lock (dropping waits for its handler, which may hold it).
 - Packaging targets are `.deb` (Ubuntu 24.04+) and the Arch PKGBUILD only; no AppImage.
+- No `minWidth`/`minHeight` on the window: tiling WMs (Hyprland/Omarchy) squeeze a window
+  below its minimum by scaling it, and pointer input then misses what's drawn. The layout
+  has to cope with narrow tiles instead (the editor panel shrinks via `clamp()`).
 - UI palette is navy and cerulean; colours live as CSS variables in `src/app.css`.

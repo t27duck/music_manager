@@ -16,9 +16,7 @@
         "label": "main",
         "title": "MusicManager",
         "width": 1440,
-        "height": 900,
-        "minWidth": 960,
-        "minHeight": 600
+        "height": 900
       }
     ],
     "security": {

@@ -320,7 +320,8 @@
 
 <style>
   .editor {
-    width: 380px;
+    /* Shrinks in narrow (e.g. tiled) windows so the table keeps some room. */
+    width: clamp(290px, 32vw, 380px);
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
