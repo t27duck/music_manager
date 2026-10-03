@@ -1,0 +1,64 @@
+# Linux sanity check: does it still build, lint and pass the tests? No binary is produced.
+# Mirrors `make check` and `make test`.
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev libasound2-dev
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # The Tauri CLI refuses to build when the npm and Rust packages differ in major.minor,
+      # and Dependabot updates them in separate PRs, so catch a mismatch here.
+      - name: Check Tauri versions match
+        run: |
+          npm_ver=$(node -p "require('./node_modules/@tauri-apps/api/package.json').version")
+          rust_ver=$(cargo metadata --format-version 1 --manifest-path src-tauri/Cargo.toml \
+            | jq -r '.packages[] | select(.name == "tauri") | .version')
+          echo "@tauri-apps/api $npm_ver, tauri crate $rust_ver"
+          [ "${npm_ver%.*}" = "${rust_ver%.*}" ] || { echo "::error::Tauri npm/crate major.minor mismatch"; exit 1; }
+
+      - run: npm run check
+
+      # Also creates build/, which Tauri's compile-time context needs.
+      - run: npm run build
+
+      - name: cargo fmt
+        run: cargo fmt --check
+        working-directory: src-tauri
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+        working-directory: src-tauri
+
+      - name: cargo test
+        run: cargo test
+        working-directory: src-tauri
