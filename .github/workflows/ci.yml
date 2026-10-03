@@ -15,6 +15,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Install system libraries
+        timeout-minutes: 5
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -23,7 +24,7 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
