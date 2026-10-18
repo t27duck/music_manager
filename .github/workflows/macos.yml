@@ -2,10 +2,10 @@
 #   chmod +x music-manager && xattr -d com.apple.quarantine music-manager
 name: macOS build
 
+# Also called by release.yml, which attaches the artifacts to the GitHub Release.
 on:
   workflow_dispatch:
-  push:
-    tags: ["v*"]
+  workflow_call:
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable

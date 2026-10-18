@@ -89,6 +89,20 @@ make check     # svelte-check, cargo check and clippy
 `make arch` packages the **committed** tree (`git archive HEAD`), so commit first.
 The `.deb` targets Ubuntu 24.04 and newer.
 
+### Releasing
+
+```sh
+make bump VERSION=0.2.0   # sets the version in package.json, Cargo.toml, tauri.conf.json, PKGBUILD and the lockfiles
+git commit -am "Release 0.2.0"
+git tag v0.2.0
+git push origin main v0.2.0
+```
+
+The tag starts the *Release* workflow, which checks the tag matches the version, builds the
+`.deb`, the Arch package, the macOS binary and the Windows installer and portable zip, and
+attaches them with a `SHA256SUMS` to a **draft** GitHub Release. Review the generated notes
+and publish it.
+
 ### macOS (Apple Silicon, unofficial)
 
 There's no macOS package, but the app runs as a plain binary (audio goes through CoreAudio).
@@ -100,14 +114,14 @@ npm run tauri build -- --no-bundle
 ./src-tauri/target/release/music-manager
 ```
 
-or run the *macOS build* GitHub Actions workflow and download its artifact, which is
+or download it from a GitHub Release (a `.tar.gz`) or the *macOS build* workflow's artifact. It is
 unsigned: `chmod +x music-manager && xattr -d com.apple.quarantine music-manager`.
 Settings and the index live in `~/Library/Application Support/music-manager/`.
 
 ### Windows (x64, unofficial)
 
-Run the *Windows build* GitHub Actions workflow (it also runs on `v*` tags) and download
-its artifact, an NSIS installer. It isn't signed, so SmartScreen warns on first run:
+Download the installer from a GitHub Release, or run the *Windows build* GitHub Actions
+workflow and download its artifact, an NSIS installer. It isn't signed, so SmartScreen warns on first run:
 *More info → Run anyway*. The installer fetches WebView2 if it's missing. Audio goes
 through WASAPI, *Show in file manager* opens Explorer, and settings and the index live in
 `%APPDATA%\music-manager\`. When reorganizing on Windows, names that Windows can't hold

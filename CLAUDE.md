@@ -12,6 +12,9 @@ Working notes for this repo. See README.md for what the app does and the module 
   `-D warnings`, `cargo fmt --check`) and `make test`. For UI changes also `npm run test:ui`.
 - `cargo fmt` uses `src-tauri/rustfmt.toml` (width 120). Run it in the container.
 - `make arch` packages `git archive HEAD`, so **commit before building the Arch package**.
+- The version lives in several files; change it only with `make bump VERSION=X.Y.Z`
+  (`scripts/version.sh`). CI fails if they disagree. Pushing a `v*` tag runs
+  `.github/workflows/release.yml`, which builds everything into a draft GitHub Release.
 - TypeScript is pinned to 6.x: svelte-check does not support TypeScript 7 yet.
 - Tauri's compile-time context needs `build/` (the frontend output) to exist, so run
   `npm run build` (or create an empty `build/index.html`) before cargo on a fresh clone.

@@ -11,7 +11,7 @@ DOCKER_UBUNTU = docker run --rm -u $(UID):$(GID) -e HOME=/tmp/home \
 	-v $(CURDIR):/src -v $(CACHE)/cargo:/usr/local/cargo/registry \
 	-v $(CACHE)/npm:/tmp/home/.npm $(UBUNTU_IMAGE)
 
-.PHONY: help images image-ubuntu image-arch deps check test test-ui deb arch package clean
+.PHONY: help images image-ubuntu image-arch deps check test test-ui deb arch package bump version-check clean
 
 help:
 	@echo "make images   - build the Ubuntu and Arch build containers"
@@ -21,6 +21,8 @@ help:
 	@echo "make deb      - build the .deb into $(DIST)/"
 	@echo "make arch     - build the Arch .pkg.tar.zst into $(DIST)/"
 	@echo "make package  - build both packages"
+	@echo "make bump VERSION=X.Y.Z - set the app version in every file"
+	@echo "make version-check      - check every file has the same version"
 
 images: image-ubuntu image-arch
 
@@ -61,6 +63,13 @@ arch: | $(CACHE)
 	rm -f $(DIST)/music-manager-src.tar.gz
 
 package: deb arch
+
+bump:
+	@[ -n "$(VERSION)" ] || { echo "usage: make bump VERSION=X.Y.Z"; exit 1; }
+	scripts/version.sh bump $(VERSION)
+
+version-check:
+	scripts/version.sh check
 
 clean:
 	rm -rf $(DIST) build node_modules src-tauri/target

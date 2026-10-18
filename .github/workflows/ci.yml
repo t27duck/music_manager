@@ -47,6 +47,9 @@ jobs:
           echo "@tauri-apps/api $npm_ver, tauri crate $rust_ver"
           [ "${npm_ver%.*}" = "${rust_ver%.*}" ] || { echo "::error::Tauri npm/crate major.minor mismatch"; exit 1; }
 
+      - name: Check the app version agrees across files
+        run: scripts/version.sh check
+
       - run: npm run check
 
       # Also creates build/, which Tauri's compile-time context needs.
