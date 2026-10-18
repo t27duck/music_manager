@@ -1,3 +1,6 @@
+<!-- Newest release first, one `# MusicManager X.Y.Z` section each. The release workflow
+     copies the section for the tag into the draft GitHub Release. -->
+
 # MusicManager 0.1.0
 
 The first release of MusicManager: a desktop app for filtering, tagging and reorganizing a local MP3 library. Your MP3 files are the source of truth. A SQLite index mirrors their tags so that search stays instant across thousands of files. It catches up with any changes at startup and watches the library while the app is open.

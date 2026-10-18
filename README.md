@@ -93,6 +93,7 @@ The `.deb` targets Ubuntu 24.04 and newer.
 
 ```sh
 make bump VERSION=0.2.0   # sets the version in package.json, Cargo.toml, tauri.conf.json, PKGBUILD and the lockfiles
+# add a "# MusicManager 0.2.0" section at the top of RELEASE_NOTES.md
 git commit -am "Release 0.2.0"
 git tag v0.2.0
 git push origin main v0.2.0
@@ -100,8 +101,9 @@ git push origin main v0.2.0
 
 The tag starts the *Release* workflow, which checks the tag matches the version, builds the
 `.deb`, the Arch package, the macOS binary and the Windows installer and portable zip, and
-attaches them with a `SHA256SUMS` to a **draft** GitHub Release. Review the generated notes
-and publish it.
+attaches them with a `SHA256SUMS` to a **draft** GitHub Release, using that version's section
+of `RELEASE_NOTES.md` as the notes. The workflow stops at once if the section is missing.
+Check the draft and publish it.
 
 ### macOS (Apple Silicon, unofficial)
 

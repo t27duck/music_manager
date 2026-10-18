@@ -43,6 +43,8 @@ bump() {
   sed -i "/^name = \"music-manager\"$/{n;s/^version = \".*\"/version = \"$v\"/}" src-tauri/Cargo.lock
   sed -i -e "s/^pkgver=.*/pkgver=$v/" -e "s/^pkgrel=.*/pkgrel=1/" packaging/arch/PKGBUILD
   check "$v"
+  scripts/release-notes.sh "$v" >/dev/null 2>&1 ||
+    echo "Next: add a '# MusicManager $v' section to RELEASE_NOTES.md"
 }
 
 case "${1:-}" in

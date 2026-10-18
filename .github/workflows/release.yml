@@ -1,5 +1,6 @@
 # Builds every package for a `v*` tag and attaches them to a draft GitHub Release, which is
-# published by hand after reviewing the notes. Bump the version first: `make bump VERSION=X.Y.Z`.
+# published by hand after a final look. Before tagging, bump the version
+# (`make bump VERSION=X.Y.Z`) and add its section to RELEASE_NOTES.md, which becomes the notes.
 name: Release
 
 on:
@@ -14,6 +15,9 @@ jobs:
 
       - name: Check the tag matches the version in every file
         run: scripts/version.sh check "${GITHUB_REF_NAME#v}"
+
+      - name: Check RELEASE_NOTES.md has a section for it
+        run: scripts/release-notes.sh "${GITHUB_REF_NAME#v}"
 
   deb:
     needs: version
@@ -77,6 +81,8 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v7
+
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
@@ -101,5 +107,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" release/* --draft --verify-tag \
-            --title "MusicManager ${GITHUB_REF_NAME#v}" --generate-notes
+            --title "MusicManager ${GITHUB_REF_NAME#v}" --notes-file "$RUNNER_TEMP/notes.md"

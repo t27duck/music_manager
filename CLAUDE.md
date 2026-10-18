@@ -14,7 +14,8 @@ Working notes for this repo. See README.md for what the app does and the module 
 - `make arch` packages `git archive HEAD`, so **commit before building the Arch package**.
 - The version lives in several files; change it only with `make bump VERSION=X.Y.Z`
   (`scripts/version.sh`). CI fails if they disagree. Pushing a `v*` tag runs
-  `.github/workflows/release.yml`, which builds everything into a draft GitHub Release.
+  `.github/workflows/release.yml`, which builds everything into a draft GitHub Release whose
+  notes are that version's `# MusicManager X.Y.Z` section of `RELEASE_NOTES.md`.
 - TypeScript is pinned to 6.x: svelte-check does not support TypeScript 7 yet.
 - Tauri's compile-time context needs `build/` (the frontend output) to exist, so run
   `npm run build` (or create an empty `build/index.html`) before cargo on a fresh clone.
