@@ -1,7 +1,7 @@
 # Maintainer: Tony Drake <t27duck@gmail.com>
 # Built by `make arch` from a `git archive` of the repository.
 pkgname=music-manager
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Local MP3 library manager: filter, bulk tag, album art and template-based reorganizing"
 arch=('x86_64')

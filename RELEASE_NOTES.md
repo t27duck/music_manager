@@ -1,6 +1,32 @@
 <!-- Newest release first, one `# MusicManager X.Y.Z` section each. The release workflow
      copies the section for the tag into the draft GitHub Release. -->
 
+# MusicManager 0.1.1
+
+A small update to 0.1.0.
+
+## Changes
+
+- **Launching from a terminal returns the prompt.** On Linux and macOS, `music-manager` now detaches from the terminal it was started from, so the shell is free straight away. Closing the terminal or pressing Ctrl+C no longer closes the app. Run `music-manager --foreground` to keep it attached and see its log output.
+- Updated dependencies, including rodio 0.23 and rusqlite 0.41.
+
+## Downloads
+
+| Platform | File | |
+| --- | --- | --- |
+| Ubuntu 24.04+ / Debian | `MusicManager_0.1.1_amd64.deb` | `sudo apt install ./MusicManager_0.1.1_amd64.deb` |
+| Arch Linux | `music-manager-0.1.1-1-x86_64.pkg.tar.zst` | `sudo pacman -U music-manager-0.1.1-1-x86_64.pkg.tar.zst` |
+| macOS (Apple Silicon) | `MusicManager_0.1.1_macos-arm64.tar.gz` | Unofficial; see below |
+| Windows x64 | `MusicManager_0.1.1_x64-setup.exe` | Unofficial installer |
+| Windows x64 (portable) | `MusicManager_0.1.1_x64-portable.zip` | Unofficial; keeps settings in its own `data` folder |
+
+`SHA256SUMS` has checksums for every file: `sha256sum -c SHA256SUMS --ignore-missing`.
+
+### Notes for the unofficial builds
+
+- **macOS**: an unsigned binary. Extract it, then run `xattr -d com.apple.quarantine music-manager` before the first launch.
+- **Windows**: unsigned, so SmartScreen warns on first run; choose *More info → Run anyway*. The installer fetches WebView2 if it's missing. The portable build needs WebView2 already installed, as it is on Windows 11 and current Windows 10.
+
 # MusicManager 0.1.0
 
 The first release of MusicManager: a desktop app for filtering, tagging and reorganizing a local MP3 library. Your MP3 files are the source of truth. A SQLite index mirrors their tags so that search stays instant across thousands of files. It catches up with any changes at startup and watches the library while the app is open.

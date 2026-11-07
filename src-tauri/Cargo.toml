@@ -1,6 +1,6 @@
 [package]
 name = "music-manager"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local MP3 library manager"
 authors = ["Tony Drake"]
 license = "MIT"
